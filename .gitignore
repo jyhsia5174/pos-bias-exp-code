@@ -1,1 +1,3 @@
-gen_data/data
+gen_data/data/**.ffm
+gen_data/data/**.svm
+
