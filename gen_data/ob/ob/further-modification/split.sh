@@ -1,7 +1,7 @@
 #!/bin/bash
 
 random_data='rd.ffm'
-filter_data='fl.ffm'
+filter_data='filter.ffm'
 truth_data='truth.ffm'
 
 total_num=`wc -l ob_all_3000.ffm | awk '{print $1}'`

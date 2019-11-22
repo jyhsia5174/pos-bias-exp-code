@@ -75,8 +75,8 @@ def convert2ffm( o_f, i_f ):
 
 if __name__ == '__main__':
     # Filter by click number
-    click_number=1000
-    #click_number=3000
+    #click_number=1000
+    click_number=3000
 
     convert2ffm('ob_all_{}.ffm'.format(click_number), 'events_filter_label_{}.csv'.format(click_number))
 

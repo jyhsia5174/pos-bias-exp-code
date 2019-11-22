@@ -3,8 +3,8 @@ import numpy
 import pandas as pd
 
 # Filter by click number
-click_number=1000
-#click_number=3000
+#click_number=1000
+click_number=3000
 
 df_click = pd.read_csv("clicks_train.csv")
 df_click_pos = df_click.loc[df_click['clicked'] > 0]
