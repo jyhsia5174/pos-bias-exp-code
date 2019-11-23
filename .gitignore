@@ -1,3 +1,12 @@
 gen_data/data/**.ffm
 gen_data/data/**.svm
 
+# tmp file
+*.pyc
+
+# model training 
+*.log
+*.pth
+
+# data dir
+data/*
