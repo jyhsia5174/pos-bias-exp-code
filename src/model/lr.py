@@ -14,4 +14,4 @@ class LogisticRegression(torch.nn.Module):
     def forward(self, x):
         #out = torch.sum(simple_elementwise_apply(self.linear, x).data, dim = 1) + self.bias
         out = torch.sum(self.linear(x), dim = 1) + self.bias
-        return torch.sigmoid(out)
+        return torch.sigmoid(out.squeeze(1))

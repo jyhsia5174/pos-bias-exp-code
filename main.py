@@ -1,11 +1,14 @@
 import torch
 import time
 import tqdm
-from sklearn.metrics import roc_auc_score
+import numpy as np
+import sys
+from sklearn.metrics import roc_auc_score, log_loss
 from torch.utils.data import DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
 from src.dataset.position import PositionDataset
+from src.dataset.a9a import A9ADataset
 from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
 
@@ -13,14 +16,20 @@ def collate_fn(batch):
     data = [torch.LongTensor(i['data']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
-    data.sort(key=lambda x: len(x), reverse=True)
+    #print(data, label)
+    #data.sort(key=lambda x: len(x), reverse=True)
     data_length = [len(sq) for sq in data]
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
-    return data, data_length, torch.FloatTensor(label).unsqueeze(-1), torch.FloatTensor(pos).unsqueeze(-1)
+    #print(data, label)
+    #sys.exit(0)
+    #return data, data_length, torch.FloatTensor(label).unsqueeze(-1), torch.FloatTensor(pos).unsqueeze(-1)
+    return data, data_length, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
-def get_dataset(name, path, training):
+def get_dataset(name, path, n_feature, training):
     if name == 'pos':
-        return PositionDataset(path, training)
+        return PositionDataset(path, n_feature, training)
+    if name == 'a9a':
+        return A9ADataset(path, training)
     else:
         raise ValueError('unknown dataset name: ' + name)
 
@@ -38,11 +47,12 @@ def get_model(name, dataset):
         raise ValueError('unknown model name: ' + name)
 
 
-def train(model, optimizer, data_loader, criterion, device, log_interval=10000):
+def train(model, optimizer, data_loader, criterion, device, log_interval=1000):
     model.train()
     total_loss = 0
     for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-        data, data_len, target = tmp
+        data, data_len, target, pos = tmp
+        del tmp
         data, target = data.to(device, torch.long), target.to(device, torch.float)
         y = model(data)
         loss = criterion(y, target.float())
@@ -60,12 +70,18 @@ def test(model, data_loader, device):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-            data, data_len, target = tmp
+            data, data_len, target, pos = tmp
+            #print(data[-10:], target[-10:], pos[-10:])
+            #sys.exit(0)
             data, target = data.to(device, torch.long), target.to(device, torch.float)
             y = model(data)
-            targets.extend(target.tolist())
-            predicts.extend(y.tolist())
-    return roc_auc_score(targets, predicts)
+            targets.extend(torch.flatten(target.to(torch.int)).tolist())
+            predicts.extend(torch.flatten(y).tolist())
+    #print(targets[:10], predicts[:10])
+    #print(predicts[np.argmax(targets)])
+    #print(min(targets), min(predicts))
+    #print(set(targets))
+    return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 
 def main(dataset_name,
@@ -78,20 +94,20 @@ def main(dataset_name,
          device,
          save_dir):
     device = torch.device(device)
-    train_dataset = get_dataset(dataset_name, dataset_path, True)
-    valid_dataset = get_dataset(dataset_name, dataset_path, False)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
-    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
+    train_dataset = get_dataset(dataset_name, dataset_path, 0, True)
+    valid_dataset = get_dataset(dataset_name, dataset_path, train_dataset.get_n_feature(), False)
+    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn, shuffle=True)
+    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn)
     model = get_model(model_name, train_dataset).to(device)
     criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.SGD(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     for epoch_i in range(epoch):
         train(model, optimizer, train_data_loader, criterion, device)
-        auc = test(model, valid_data_loader, device)
-        print('epoch:', epoch_i, 'validation: auc:', auc)
+        auc, logloss = test(model, valid_data_loader, device)
+        print('epoch:', epoch_i, 'validation: auc:', auc, 'logloss:', logloss)
     #auc = test(model, valid_data_loader, device)
     #print('test auc:', auc)
-    #torch.save(model, f'{save_dir}/{model_name}.pt')
+    torch.save(model, f'{save_dir}/{model_name}.pt')
 
 
 if __name__ == '__main__':
@@ -101,12 +117,12 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
     parser.add_argument('--model_name', default='lr')
-    parser.add_argument('--epoch', type=int, default=10)
-    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--epoch', type=int, default=20)
+    parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--batch_size', type=int, default=2048)
-    parser.add_argument('--weight_decay', type=float, default=1e-5)
-    parser.add_argument('--device', default='cuda:0')
-    #parser.add_argument('--device', default='cpu')
+    parser.add_argument('--weight_decay', type=float, default=0)
+    #parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--device', default='cpu')
     parser.add_argument('--save_dir', default='tmp')
     args = parser.parse_args()
     main(args.dataset_name,
