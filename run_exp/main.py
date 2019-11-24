@@ -16,13 +16,9 @@ def collate_fn(batch):
     data = [torch.LongTensor(i['data']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
-    #print(data, label)
     #data.sort(key=lambda x: len(x), reverse=True)
     data_length = [len(sq) for sq in data]
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
-    #print(data, label)
-    #sys.exit(0)
-    #return data, data_length, torch.FloatTensor(label).unsqueeze(-1), torch.FloatTensor(pos).unsqueeze(-1)
     return data, data_length, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def get_dataset(name, path, n_feature, training):
@@ -121,8 +117,8 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument('--weight_decay', type=float, default=0)
-    #parser.add_argument('--device', default='cuda:0')
-    parser.add_argument('--device', default='cpu')
+    parser.add_argument('--device', default='cuda:0')
+    #parser.add_argument('--device', default='cpu')
     parser.add_argument('--save_dir', default='tmp')
     args = parser.parse_args()
     main(args.dataset_name,
