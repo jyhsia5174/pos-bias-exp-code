@@ -21,9 +21,9 @@ def collate_fn(batch):
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
     return data, data_length, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
-def get_dataset(name, path, n_feature, training):
+def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
     if name == 'pos':
-        return PositionDataset(path, n_feature, training)
+        return PositionDataset(path, data_prefix, rebuild_cache, max_dim)
     if name == 'a9a':
         return A9ADataset(path, training)
     else:
@@ -34,7 +34,7 @@ def get_model(name, dataset):
     """
     Hyperparameters are empirically determined, not opitmized.
     """
-    input_dims = dataset.n_feature
+    input_dims = dataset.max_dim
     if name == 'lr':
         return LogisticRegression(input_dims)
     #elif name == 'bilr':
@@ -90,10 +90,10 @@ def main(dataset_name,
          device,
          save_dir):
     device = torch.device(device)
-    train_dataset = get_dataset(dataset_name, dataset_path, 0, True)
-    valid_dataset = get_dataset(dataset_name, dataset_path, train_dataset.get_n_feature(), False)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn, shuffle=True)
-    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn)
+    train_dataset = get_dataset(dataset_name, dataset_path, 'tr', False)
+    valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
+    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
+    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
     model = get_model(model_name, train_dataset).to(device)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
