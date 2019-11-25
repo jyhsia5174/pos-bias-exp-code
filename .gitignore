@@ -7,6 +7,7 @@ gen_data/data/**.svm
 # model training 
 *.log
 *.pth
+*.pt
 
 # data dir
 data/*

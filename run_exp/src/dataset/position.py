@@ -129,7 +129,7 @@ class PositionDataset(Dataset):
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
-    dataset = PositionDataset(dataset_path='../../../data/random', data_prefix='va', rebuild_cache=False, tr_max_dim=1000000)
+    dataset = PositionDataset(dataset_path='../../../data/random', data_prefix='tr', rebuild_cache=False, tr_max_dim=-1)
     print('Start loading!')
     #f = open('pos.svm', 'w')
     print(len(dataset))

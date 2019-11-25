@@ -17,4 +17,4 @@ class BiLogisticRegression(torch.nn.Module):
         x2 = torch.sum(self.fc2(x2), dim = 1) + self.bias2
         x2 = torch.sigmoid(x2)
         out = x1*x2
-        return out
+        return out.squeeze(1)
