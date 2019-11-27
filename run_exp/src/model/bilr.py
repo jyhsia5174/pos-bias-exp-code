@@ -8,13 +8,13 @@ class BiLogisticRegression(torch.nn.Module):
         #self.fc2 = torch.nn.Linear(inputSize2, 1, bias=True)
         self.fc1 = torch.nn.Embedding(inputSize1, 1, padding_idx=0)
         self.bias1 = torch.nn.Parameter(torch.zeros((1,)))
-        self.fc2 = torch.nn.Embedding(inputSize2, 1, padding_idx=0)
-        self.bias2 = torch.nn.Parameter(torch.zeros((1,)))
+        self.fc2 = torch.nn.Embedding(inputSize2+1, 1, padding_idx=0) # add 1 for padding_idx
+        #self.bias2 = torch.nn.Parameter(torch.zeros((1,)))
 
     def forward(self, x1, x2):
         x1 = torch.sum(self.fc1(x1), dim = 1) + self.bias1
         x1 = torch.sigmoid(x1)
-        x2 = torch.sum(self.fc2(x2), dim = 1) + self.bias2
+        x2 = torch.sum(self.fc2(x2), dim = 1)
         x2 = torch.sigmoid(x2)
         out = x1*x2
         return out.squeeze(1)

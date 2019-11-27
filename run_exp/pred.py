@@ -18,7 +18,7 @@ def hook(self, input, output):
     for i in range(1, 10):
         ratio.append(tmp[i+1]/tmp[i])
     print(tmp)
-    print(ratio, np.mean(ratio[1:]))
+    print(ratio, np.mean(ratio))
 
 def collate_fn(batch):
     data = [torch.LongTensor(i['data']) for i in batch]
@@ -31,9 +31,9 @@ def collate_fn(batch):
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
     return data, data_length, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
-def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
+def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
-        return PositionDataset(path, data_prefix, rebuild_cache, max_dim)
+        return PositionDataset(path, data_prefix, rebuild_cache, max_dim, test_flag)
     if name == 'a9a':
         return A9ADataset(path, training)
     else:
@@ -53,38 +53,10 @@ def get_model(name, dataset):
         raise ValueError('unknown model name: ' + name)
 
 
-def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=5000):
-    model.train()
-    #handle = model.fc2.register_forward_hook(hook)
-    #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
-    #handle.remove()
-    total_loss = 0
-    for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-        data, data_len, target, pos = tmp
-        del tmp
-        if 'bi' in model_name:
-            data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-            y = model(data, pos)
-        else:
-            data, target = data.to(device, torch.long), target.to(device, torch.float)
-            y = model(data)
-        loss = criterion(y, target.float())
-        model.zero_grad()
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-        if (i + 1) % log_interval == 0:
-            print('    - loss:', total_loss / log_interval)
-            total_loss = 0
-
-
-def test(model, data_loader, device, model_name):
+def pred(model, data_loader, device, model_name):
     model.eval()
-    handle = model.fc2.register_forward_hook(hook)
-    model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
-    handle.remove()
     targets, predicts = list(), list()
-    with torch.no_grad():
+    with torch.no_grad(), open('tmp.pred', 'w') as fp:
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
             data, data_len, target, pos = tmp
             if 'bi' in model_name:
@@ -93,40 +65,41 @@ def test(model, data_loader, device, model_name):
             else:
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
                 y = model(data)
-            targets.extend(torch.flatten(target.to(torch.int)).tolist())
-            predicts.extend(torch.flatten(y).tolist())
-    #print(targets[:10], predicts[:10])
-    #print(predicts[np.argmax(targets)])
-    #print(min(targets), min(predicts))
-    #print(set(targets))
-    return roc_auc_score(targets, predicts), log_loss(targets, predicts)
+            for p in torch.flatten(y).tolist():
+                fp.write('%.4f\n'%(p*2.))
+            #targets.extend(torch.flatten(target.to(torch.int)).tolist())
+            #predicts.extend([j*2. for j in torch.flatten(y).tolist()])
+    #return predicts
 
 
 def main(dataset_name,
          dataset_path,
          model_name,
-         epoch,
-         learning_rate,
+         model_path,
+         #epoch,
+         #learning_rate,
          batch_size,
-         weight_decay,
+         #weight_decay,
          device,
          save_dir):
     device = torch.device(device)
     train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
-    valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
+    valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1, True)
+    #train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
     model = get_model(model_name, train_dataset).to(device)
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    for epoch_i in range(epoch):
-        train(model, optimizer, train_data_loader, criterion, device, model_name)
-        auc, logloss = test(model, valid_data_loader, device, model_name)
-        print('epoch:', epoch_i, 'validation: auc:', auc, 'logloss:', logloss)
-    #auc = test(model, valid_data_loader, device)
+    #criterion = torch.nn.BCELoss()
+    #optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    #for epoch_i in range(epoch):
+    #    train(model, optimizer, train_data_loader, criterion, device, model_name)
+    #    auc, logloss = test(model, valid_data_loader, device, model_name)
+    #    print('epoch:', epoch_i, 'validation: auc:', auc, 'logloss:', logloss)
+    model.load_state_dict(torch.load(model_path))
+    targets = pred(model, valid_data_loader, device)
+    print(targets)
     #print('test auc:', auc)
-    model_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
-    torch.save(model, f'{save_dir}/{model_name}.pt')
+    #model_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
+    #torch.save(model, f'{save_dir}/{model_name}.pt')
 
 
 if __name__ == '__main__':
@@ -136,10 +109,11 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
     parser.add_argument('--model_name', default='bilr')
-    parser.add_argument('--epoch', type=int, default=10)
-    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--model_path', help='the model path')
+    #parser.add_argument('--epoch', type=int, default=10)
+    #parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
-    parser.add_argument('--weight_decay', type=float, default=1e-6)
+    #parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0')
     #parser.add_argument('--device', default='cpu')
     parser.add_argument('--save_dir', default='tmp')
@@ -147,9 +121,10 @@ if __name__ == '__main__':
     main(args.dataset_name,
          args.dataset_path,
          args.model_name,
-         args.epoch,
-         args.learning_rate,
+         args.model_path,
+         #args.epoch,
+         #args.learning_rate,
          args.batch_size,
-         args.weight_decay,
+         #args.weight_decay,
          args.device,
          args.save_dir)

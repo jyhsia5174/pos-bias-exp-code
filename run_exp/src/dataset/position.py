@@ -11,53 +11,15 @@ from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 
 class PositionDataset(Dataset):
-    def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, tr_max_dim=-1):
-        #self.items = []
-        #self.contexts = []
-        #self.labels = []
-        ##self.len = 0  # number of samples
-        #if training:
-        #    self.n_feature = 0  # dim of features
-        #elif tr_n_feature > 0.:
-        #    self.n_feature = tr_n_feature
-        #else:
-        #    raise ValueError("tr_n_feature is not set!")
-
-        #files = os.listdir(root_dir)
-        #data_file = 'va.svm' if training else 'va.svm'
-        #assert data_file in files, "%s does not exist!"%data_file
-        #assert 'item.svm' in files, "item.svm does not exist!"
-        #data_file = os.path.join(root_dir, data_file)
-        #item_file = os.path.join(root_dir, 'item.svm')
-        #with open(data_file, 'r') as data, open(item_file, 'r') as item:
-        #    for line in item.readlines():
-        #        line = line.strip()
-        #        items = [int(i.split(':')[0]) for i in line.split(' ')]
-        #        self.items.append(items)
-
-        #    for line in data.readlines():
-        #        line = line.strip()
-        #        l, c = line.split(' ', 1)
-        #        l = l.split(',')
-        #        if training:
-        #            c = sorted([int(i.split(':')[0]) for i in c.split(' ')])
-        #            n_feature = c[-1]
-        #            if n_feature > self.n_feature:
-        #                self.n_feature = n_feature
-        #        else:
-        #            c = sorted([int(i.split(':')[0]) for i in c.split(' ') if int(i.split(':')[0]) <= tr_n_feature - 11])
-        #        self.labels.append(l)
-        #        self.contexts.append(c)
-        #if training:
-        #    self.n_feature += 11  # add idx for pos and padding feature
-        #print('max dim:%d'%self.n_feature)
-        ##print(len(self.items), len(self.contexts), len(self.labels))
-        
+    def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, tr_max_dim=-1, test_flag=False):
         self.tr_max_dim = tr_max_dim
+        self.test_flag = test_flag
         data_path = os.path.join(dataset_path, data_prefix + '.svm')
         item_path = os.path.join(dataset_path, 'item.svm')
         assert Path(data_path).exists(), "%s does not exist!"%data_path
         cache_path = os.path.join(dataset_path, data_prefix + '.lmdb')
+        if self.test_flag:
+            cache_path = cache_path + '.te'
 
         if rebuild_cache or not Path(cache_path).exists():
             shutil.rmtree(cache_path, ignore_errors=True)
@@ -97,19 +59,32 @@ class PositionDataset(Dataset):
                 labels, context = line.split(' ', 1)
                 labels = labels.split(',')
                 context = [int(i.split(':')[0]) for i in context.split(' ')]
-                for pos, l in enumerate(labels):
-                    item_idx, flag = l.split(':')
-                    item = items[int(item_idx)]
-                    feature = sorted(item + context)
-                    if  feature[-1] > max_dim:
-                        max_dim = feature[-1]
-                    feature = [int(flag), item_idx, pos] + feature
-                    feature = np.array(feature, dtype=np.int32)  # [label, item_idx, position, feature_idx]
-                    buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim))
-                    sample_idx += 1
-                    if sample_idx % buffer_size == 0:
-                        yield buf
-                        buf.clear()
+                if not self.test_flag:
+                    for pos, l in enumerate(labels):   
+                        item_idx, flag = l.split(':')
+                        item = items[int(item_idx)]
+                        feature = sorted(item + context)
+                        if  feature[-1] > max_dim:
+                            max_dim = feature[-1]
+                        feature = [int(flag), item_idx, pos] + feature
+                        feature = np.array(feature, dtype=np.int32)  # [label, item_idx, position, feature_idx]
+                        buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim))
+                        sample_idx += 1
+                        if sample_idx % buffer_size == 0:
+                            yield buf
+                            buf.clear()
+                else:
+                    for item_idx, item in enumerate(items):
+                        feature = sorted(item + context)
+                        if  feature[-1] > max_dim:
+                            max_dim = feature[-1]
+                        feature = [-1, item_idx, 0] + feature
+                        feature = np.array(feature, dtype=np.int32)  # [-1, item_idx, 0, feature_idx], -1 for unlabel and 0 for no-position
+                        buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim))
+                        sample_idx += 1
+                        if sample_idx % buffer_size == 0:
+                            yield buf
+                            buf.clear()
             yield buf
 
     def __len__(self):
@@ -121,7 +96,7 @@ class PositionDataset(Dataset):
             data = np_array[3:]
         if self.tr_max_dim > 0:
             data = data[data <= self.tr_max_dim]
-        return {'data':data, 'label':np_array[0], 'pos':np_array[2], 'item_idx':np_array[1]}
+        return {'data':data, 'label':np_array[0], 'pos':np_array[2]+1, 'item_idx':np_array[1]}  # pos \in {1,2,...9,10}, 0 for no-position
 
     def get_max_dim(self):
         return self.max_dim
