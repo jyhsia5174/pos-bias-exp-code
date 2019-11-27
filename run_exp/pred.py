@@ -18,14 +18,14 @@ def hook(self, input, output):
     for i in range(1, 10):
         ratio.append(tmp[i+1]/tmp[i])
     print(tmp)
-    print(ratio, np.mean(ratio))
+    print(ratio, np.mean(ratio[1:]))
 
 def collate_fn(batch):
     data = [torch.LongTensor(i['data']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
-    if 0 in pos:
-        print("The position padding_idx occurs!")
+    #if 0 in pos:
+    #    print("The position padding_idx occurs!")
     #data.sort(key=lambda x: len(x), reverse=True)
     data_length = [len(sq) for sq in data]
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
@@ -84,19 +84,18 @@ def main(dataset_name,
          save_dir):
     device = torch.device(device)
     train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
-    valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1, True)
+    valid_dataset = get_dataset(dataset_name, dataset_path, 'gt', False, train_dataset.get_max_dim() - 1, True)
     #train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
-    model = get_model(model_name, train_dataset).to(device)
+    #model = get_model(model_name, train_dataset).to(device)
     #criterion = torch.nn.BCELoss()
     #optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     #for epoch_i in range(epoch):
     #    train(model, optimizer, train_data_loader, criterion, device, model_name)
     #    auc, logloss = test(model, valid_data_loader, device, model_name)
     #    print('epoch:', epoch_i, 'validation: auc:', auc, 'logloss:', logloss)
-    model.load_state_dict(torch.load(model_path))
-    targets = pred(model, valid_data_loader, device)
-    print(targets)
+    model = torch.load(model_path)
+    pred(model, valid_data_loader, device, model_name)
     #print('test auc:', auc)
     #model_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
     #torch.save(model, f'{save_dir}/{model_name}.pt')

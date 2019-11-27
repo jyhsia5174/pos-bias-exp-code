@@ -9,5 +9,8 @@ gen_data/data/**.svm
 *.pth
 *.pt
 
+# model output
+*.pred
+
 # data dir
 data/*
