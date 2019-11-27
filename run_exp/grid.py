@@ -1,4 +1,5 @@
 import torch
+import os
 import time
 import tqdm
 import numpy as np
@@ -117,9 +118,9 @@ def main(dataset_name,
          weight_decay,
          device,
          save_dir):
-	mkdir_if_not_exist(save_dir)
+    mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
+    train_dataset = get_dataset(dataset_name, dataset_path, 'tr', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
@@ -127,7 +128,7 @@ def main(dataset_name,
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
-    with open(model_file_name+'.log', 'w') as log:
+    with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
         for epoch_i in range(epoch):
             tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
             va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
