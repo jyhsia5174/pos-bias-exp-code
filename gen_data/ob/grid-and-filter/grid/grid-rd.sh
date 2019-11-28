@@ -21,4 +21,4 @@ task(){
 }
 
 task
-task | xargs -0 -d '\n'  -P 4 -I {} sh -c {} &
+#task | xargs -0 -d '\n'  -P 4 -I {} sh -c {} &

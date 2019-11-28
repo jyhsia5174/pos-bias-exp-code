@@ -1,3 +1,5 @@
-gen_data/data/**.ffm
-gen_data/data/**.svm
+*.ffm
+*.svm
+*.csv
+*.swp
 
