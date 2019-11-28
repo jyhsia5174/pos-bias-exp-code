@@ -12,6 +12,7 @@ from src.dataset.position import PositionDataset
 from src.dataset.a9a import A9ADataset
 from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
+from src.model.extlr import ExtLogisticRegression
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -54,6 +55,8 @@ def get_model(name, dataset):
         return LogisticRegression(input_dims)
     elif name == 'bilr':
         return BiLogisticRegression(input_dims, 10)
+    elif name == 'extlr':
+        return ExtLogisticRegression(input_dims, 10)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -68,7 +71,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     for i, tmp in enumerate(pbar):
         data, data_len, target, pos = tmp
         del tmp
-        if 'bi' in model_name:
+        if 'bi' in model_name or 'ext' in model_name:
             data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
         else:
@@ -94,7 +97,7 @@ def test(model, data_loader, device, model_name):
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
             data, data_len, target, pos = tmp
-            if 'bi' in model_name:
+            if 'bi' in model_name or 'ext' in model_name:
                 data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
             else:

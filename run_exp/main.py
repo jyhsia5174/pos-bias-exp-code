@@ -1,4 +1,5 @@
 import torch
+import os
 import time
 import tqdm
 import numpy as np
@@ -11,6 +12,7 @@ from src.dataset.position import PositionDataset
 from src.dataset.a9a import A9ADataset
 from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
+from src.model.extlr import ExtLogisticRegression
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -53,6 +55,8 @@ def get_model(name, dataset):
         return LogisticRegression(input_dims)
     elif name == 'bilr':
         return BiLogisticRegression(input_dims, 10)
+    elif name == 'extlr':
+        return ExtLogisticRegression(input_dims, 10)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -67,7 +71,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     for i, tmp in enumerate(pbar):
         data, data_len, target, pos = tmp
         del tmp
-        if 'bi' in model_name:
+        if 'bi' in model_name or 'ext' in model_name:
             data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
         else:
@@ -86,14 +90,14 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
 
 def test(model, data_loader, device, model_name):
     model.eval()
-    handle = model.fc2.register_forward_hook(hook)
-    model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
-    handle.remove()
+    #handle = model.fc2.register_forward_hook(hook)
+    #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
+    #handle.remove()
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
             data, data_len, target, pos = tmp
-            if 'bi' in model_name:
+            if 'bi' in model_name or 'ext' in model_name:
                 data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
             else:
@@ -117,7 +121,7 @@ def main(dataset_name,
          weight_decay,
          device,
          save_dir):
-	mkdir_if_not_exist(save_dir)
+    mkdir_if_not_exist(save_dir)
     device = torch.device(device)
     train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
@@ -127,7 +131,7 @@ def main(dataset_name,
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
-    with open(model_file_name+'.log', 'w') as log:
+    with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
         for epoch_i in range(epoch):
             tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
             va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
@@ -144,7 +148,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='bilr')
+    parser.add_argument('--model_name', default='extlr')
     parser.add_argument('--epoch', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
