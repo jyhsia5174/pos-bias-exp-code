@@ -3,3 +3,16 @@
 *.csv
 *.swp
 
+# tmp file
+*.pyc
+
+# model training 
+*.log
+*.pth
+*.pt
+
+# model output
+*.pred
+
+# data dir
+data/*
