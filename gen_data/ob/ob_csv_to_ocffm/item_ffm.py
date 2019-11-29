@@ -38,7 +38,7 @@ def make_tuple(feat_list,field):
     fnc = lambda x: "{}:{}".format(int(field), x)
     return list(map(fnc, feat_str))
 
-item_svm = open('item_{}.ffm'.format(click_number), 'w')
+item_svm = open('item.ffm', 'w')
 for line in csv.DictReader(open(PATH), delimiter=','):
     # Key1
     feat_idx_list = []
