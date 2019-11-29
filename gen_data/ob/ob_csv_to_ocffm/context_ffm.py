@@ -78,5 +78,5 @@ if __name__ == '__main__':
     #click_number=1000
     click_number=3000
 
-    convert2ffm('ob_all_{}.ffm'.format(click_number), 'events_filter_label_{}.csv'.format(click_number))
+    convert2ffm('ob_all.ffm', 'events_filter_label_{}.csv'.format(click_number))
 

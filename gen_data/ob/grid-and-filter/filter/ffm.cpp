@@ -1316,8 +1316,8 @@ ImpDouble ImpProblem::func() {
 
 void ImpProblem::random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
    Vec probability_vec(z.size(), 1.0);
-   random_device rd;
-   mt19937 gen(rd());
+   //random_device rd;
+   //mt19937 gen(rd());
    
    const ImpInt max_t = 20;
    ImpInt t = 0;
@@ -1341,8 +1341,8 @@ void ImpProblem::propensious_filter(const Vec& z, vector<pair<ImpLong, ImpDouble
    }
    for(auto i : probability_vec)
        prob_sum += i;
-   random_device rd;
-   mt19937 gen(rd());
+   //random_device rd;
+   //mt19937 gen(rd());
    
    const ImpInt max_t = 20;
    ImpInt t = 0;
@@ -1390,7 +1390,10 @@ void ImpProblem::filter_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong
             if( idx == y->idx )
                 label = 1;
         }
-        fprintf(f_out, "%ld:%d:%lf,", idx, label, prob);
+        if(prob == 1)
+            fprintf(f_out, "%ld:%d:1,", idx, label);
+        else
+            fprintf(f_out, "%ld:%d:%.3e,", idx, label, prob);
     }
     fprintf(f_out, "\n");
 }
@@ -1445,10 +1448,15 @@ void ImpProblem::filter() {
             }
         }
     }
+ 
+
+    gen.seed(1);
+    FILE * f_rd = fopen("random_filter.label", "w" );
+    FILE * f_pr = fopen("propensious_filter.label", "w" );
+    FILE * f_de = fopen("determined_filter.label", "w" );
+
+    const Vec price_vec = init_price_vec( bt.size() );
    
-    FILE * f_rd = fopen("random_filter", "w" );
-    FILE * f_pr = fopen("propensious_filter", "w" );
-    FILE * f_de = fopen("determined_filter", "w" );
     for (ImpLong i = 0; i < Uva->m; i++) {
         Vec z(bt.size(), at[i]);
         if(Uva->nnx[i] == 0) {
@@ -1458,9 +1466,19 @@ void ImpProblem::filter() {
             z.assign(bt.begin(), bt.end());
             pred_z(i, z.data());
         }
+        
         vector<pair<ImpLong, ImpDouble>> idx_list_rd;
         vector<pair<ImpLong, ImpDouble>> idx_list_pr;
         vector<pair<ImpLong, ImpDouble>> idx_list_de;
+
+        for(unsigned int j = 0; j < z.size(); j++){
+            if( z[j] > 0 )
+                z[j] = 1.0 / (1.0 + exp(-z[j]));
+            else
+                z[j] = exp(z[j]) / (exp(z[j]) + 1.0);
+            z[j] *= price_vec[j];
+        }
+
         random_filter(z, idx_list_rd);
         propensious_filter(z, idx_list_pr);
         determined_filter(z, idx_list_de);
@@ -1472,4 +1490,14 @@ void ImpProblem::filter() {
     fclose(f_rd);
     fclose(f_pr);
     fclose(f_de);
+}
+
+Vec ImpProblem::init_price_vec(const int price_list_size){
+    std::gamma_distribution<double> distribution(0.5,1.0);
+    Vec price_vec(price_list_size, 0.0);
+
+    for(auto& x: price_vec)
+        x = distribution(gen);
+
+    return price_vec;
 }

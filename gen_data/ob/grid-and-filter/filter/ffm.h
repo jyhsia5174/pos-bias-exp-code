@@ -110,6 +110,7 @@ private:
     Vec a, b, va_loss_prec, va_loss_ndcg, sa, sb;
 
     vector<ImpInt> top_k;
+    mt19937 gen;
     
     void random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
     void propensious_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
@@ -154,8 +155,8 @@ private:
     void ndcg(ImpDouble *z, ImpLong i, vector<ImpDouble> &hit_counts);
     void validate();
     void print_epoch_info(ImpInt t);
+    Vec init_price_vec(const int price_list_size);
 
 };
-
 
 void save_model(const ImpProblem & prob, string & model_path );

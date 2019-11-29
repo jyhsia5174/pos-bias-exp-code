@@ -4,7 +4,7 @@ w=1
 r='-1'
 c=5
 k=8
-others=''
+others='--ns'
 
 va='rd.va.ffm'
 tr='rd.tr.ffm'
@@ -21,4 +21,4 @@ task(){
 }
 
 task
-#task | xargs -0 -d '\n'  -P 4 -I {} sh -c {} &
+task | xargs -0 -d '\n'  -P 4 -I {} sh -c {} &
