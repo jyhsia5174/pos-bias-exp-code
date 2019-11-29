@@ -1475,7 +1475,7 @@ void ImpProblem::filter() {
             if( z[j] > 0 )
                 z[j] = 1.0 / (1.0 + exp(-z[j]));
             else
-                z[j] = exp(z[j]) / (exp(z[j]) + 1);
+                z[j] = exp(z[j]) / (exp(z[j]) + 1.0);
             z[j] *= price_vec[j];
         }
 
@@ -1493,7 +1493,7 @@ void ImpProblem::filter() {
 }
 
 Vec ImpProblem::init_price_vec(const int price_list_size){
-    std::gamma_distribution<double> distribution(2.0,2.0);
+    std::gamma_distribution<double> distribution(0.5,1.0);
     Vec price_vec(price_list_size, 0.0);
 
     for(auto& x: price_vec)

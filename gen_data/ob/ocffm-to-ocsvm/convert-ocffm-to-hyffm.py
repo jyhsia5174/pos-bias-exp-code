@@ -7,7 +7,7 @@ def convert(line):
 
     converted_label = [] 
     for label in labels:
-        converted_label.append("{}:1".format(label))
+        converted_label.append("{}:1:1".format(label))
 
     return "{} {}".format(",".join(converted_label), " ".join(features))
 

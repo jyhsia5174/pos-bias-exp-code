@@ -1,6 +1,6 @@
 train='./train'
 t=100
-w=0
+w=1
 r='-1'
 c=5
 k=8
