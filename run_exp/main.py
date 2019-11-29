@@ -13,6 +13,7 @@ from src.dataset.a9a import A9ADataset
 from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
 from src.model.extlr import ExtLogisticRegression
+from src.model.dssm import DSSM
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -26,16 +27,29 @@ def hook(self, input, output):
     print(tmp)
     print(ratio, np.mean(ratio[1:]))
 
-def collate_fn(batch):
-    data = [torch.LongTensor(i['data']) for i in batch]
+def collate_fn_for_lr(batch):
+    data = [torch.LongTensor(np.hstack((i['item'], i['context']))) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
     if 0 in pos:
         print("The position padding_idx occurs!")
     #data.sort(key=lambda x: len(x), reverse=True)
-    data_length = [len(sq) for sq in data]
+    #data_length = [len(sq) for sq in data]
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
-    return data, data_length, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+    return data, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+
+def collate_fn_for_dssm(batch):
+    item = [torch.LongTensor(i['item']) for i in batch]
+    context = [torch.LongTensor(i['context']) for i in batch]
+    label = [i['label'] for i in batch]
+    pos = [i['pos'] for i in batch]
+    if 0 in pos:
+        print("The position padding_idx occurs!")
+    #data.sort(key=lambda x: len(x), reverse=True)
+    #data_length = [len(sq) for sq in data]
+    item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
+    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
+    return item, context, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
     if name == 'pos':
@@ -57,6 +71,8 @@ def get_model(name, dataset):
         return BiLogisticRegression(input_dims, 10)
     elif name == 'extlr':
         return ExtLogisticRegression(input_dims, 10)
+    elif name == 'dssm':
+        return DSSM(input_dims)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -69,12 +85,16 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)
     for i, tmp in enumerate(pbar):
-        data, data_len, target, pos = tmp
-        del tmp
         if 'bi' in model_name or 'ext' in model_name:
+            data, target, pos = tmp
             data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
+        elif model_name == 'dssm':
+            context, item, target, pos = tmp
+            context, item, target= context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+            y = model(context, item)
         else:
+            data, target, pos = tmp
             data, target = data.to(device, torch.long), target.to(device, torch.float)
             y = model(data)
         loss = criterion(y, target.float())
@@ -96,11 +116,16 @@ def test(model, data_loader, device, model_name):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-            data, data_len, target, pos = tmp
             if 'bi' in model_name or 'ext' in model_name:
+                data, target, pos = tmp
                 data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
+            elif model_name == 'dssm':
+                context, item, target, pos = tmp
+                context, item, target= context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+                y = model(context, item)
             else:
+                data, target, pos = tmp
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
                 y = model(data)
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
@@ -123,7 +148,11 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
+    if model_name == 'dssm':
+        collate_fn = collate_fn_for_dssm 
+    else:
+        collate_fn = collate_fn_for_lr 
+    train_dataset = get_dataset(dataset_name, dataset_path, 'tr', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
@@ -148,7 +177,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='extlr')
+    parser.add_argument('--model_name', default='dssm')
     parser.add_argument('--epoch', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
