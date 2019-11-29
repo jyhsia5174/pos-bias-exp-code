@@ -2,9 +2,11 @@
 *.svm
 *.csv
 *.swp
+*.label
 
 # tmp file
 *.pyc
+*.tmp
 
 # model training 
 *.log
@@ -16,3 +18,12 @@
 
 # data dir
 data/*
+
+# binary
+*.o
+*.model
+train
+
+# tags
+tags
+
