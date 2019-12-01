@@ -357,6 +357,24 @@ void ImpProblem::add_side(const Vec &p, const Vec &q, const ImpLong &m1, Vec &a1
     }
 }
 
+void ImpProblem::init_at(Vec &out) {
+    for (ImpInt f1 = 0; f1 < fu; f1++) {
+        for (ImpInt f2 = f1; f2 < fu; f2++) {
+            const ImpInt f12 = index_vec(f1, f2, f);
+            add_side(Pva[f12], Qva[f12], Uva->m, out);
+        }
+    }
+}
+
+void ImpProblem::init_bt(Vec &out) {
+    for (ImpInt f1 = fu; f1 < f; f1++) {
+        for (ImpInt f2 = f1; f2 < f; f2++) {
+            const ImpInt f12 = index_vec(f1, f2, f);
+            add_side(Pva[f12], Qva[f12], Uva->m, out);
+        }
+    }
+}
+
 void ImpProblem::calc_side() {
     for (ImpInt f1 = 0; f1 < fu; f1++) {
         for (ImpInt f2 = f1; f2 < fu; f2++) {
@@ -912,18 +930,8 @@ void ImpProblem::validate() {
     Vec at(Uva->m, 0), bt(V->m, 0);
 
     if (param->self_side) {
-        for (ImpInt f1 = 0; f1 < fu; f1++) {
-            for (ImpInt f2 = f1; f2 < fu; f2++) {
-                const ImpInt f12 = index_vec(f1, f2, f);
-                add_side(Pva[f12], Qva[f12], Uva->m, at);
-            }
-        }
-        for (ImpInt f1 = fu; f1 < f; f1++) {
-            for (ImpInt f2 = f1; f2 < f; f2++) {
-                const ImpInt f12 = index_vec(f1, f2, f);
-                add_side(Pva[f12], Qva[f12], V->m, bt);
-            }
-        }
+        init_at(at);
+        init_bt(bt);
     }
 
     ImpDouble ploss = 0;
@@ -1435,18 +1443,8 @@ void ImpProblem::filter() {
     Vec at(Uva->m, 0), bt(V->m, 0);
 
     if (param->self_side) {
-        for (ImpInt f1 = 0; f1 < fu; f1++) {
-            for (ImpInt f2 = f1; f2 < fu; f2++) {
-                const ImpInt f12 = index_vec(f1, f2, f);
-                add_side(Pva[f12], Qva[f12], Uva->m, at);
-            }
-        }
-        for (ImpInt f1 = fu; f1 < f; f1++) {
-            for (ImpInt f2 = f1; f2 < f; f2++) {
-                const ImpInt f12 = index_vec(f1, f2, f);
-                add_side(Pva[f12], Qva[f12], V->m, bt);
-            }
-        }
+        init_at(at);
+        init_bt(bt);
     }
  
 

@@ -148,6 +148,8 @@ private:
 
     void one_epoch();
     void init_va(ImpInt size);
+    void init_at(Vec &out);
+    void init_bt(Vec &out);
 
     void pred_z(const ImpLong i, ImpDouble *z);
     void pred_items();
