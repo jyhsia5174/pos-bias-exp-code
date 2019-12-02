@@ -370,7 +370,7 @@ void ImpProblem::init_bt(Vec &out) {
     for (ImpInt f1 = fu; f1 < f; f1++) {
         for (ImpInt f2 = f1; f2 < f; f2++) {
             const ImpInt f12 = index_vec(f1, f2, f);
-            add_side(Pva[f12], Qva[f12], Uva->m, out);
+            add_side(Pva[f12], Qva[f12], V->m, out);
         }
     }
 }
@@ -1514,7 +1514,7 @@ void ImpProblem::filter() {
 }
 
 Vec ImpProblem::init_price_vec(const int price_list_size){
-    std::gamma_distribution<double> distribution(20,0.5);
+    std::gamma_distribution<double> distribution(10,0.4);
     Vec price_vec(price_list_size, 0.0);
 
     for(auto& x: price_vec)
