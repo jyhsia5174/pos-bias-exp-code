@@ -14,6 +14,7 @@ from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
 from src.model.extlr import ExtLogisticRegression
 from src.model.dssm import DSSM
+from src.model.bidssm import BiDSSM
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -73,6 +74,8 @@ def get_model(name, dataset):
         return ExtLogisticRegression(input_dims, 10)
     elif name == 'dssm':
         return DSSM(input_dims)
+    elif name == 'bidssm':
+        return BiDSSM(input_dims, 10)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -85,14 +88,18 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)
     for i, tmp in enumerate(pbar):
-        if 'bi' in model_name or 'ext' in model_name:
+        if 'bilr' == model_name or 'extlr' == model_name:
             data, target, pos = tmp
-            data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+            data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
         elif model_name == 'dssm':
             context, item, target, pos = tmp
-            context, item, target= context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+            context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
             y = model(context, item)
+        elif model_name == 'bidssm':
+            context, item, target, pos = tmp
+            context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+            y = model(context, item, pos)
         else:
             data, target, pos = tmp
             data, target = data.to(device, torch.long), target.to(device, torch.float)
@@ -116,14 +123,18 @@ def test(model, data_loader, device, model_name):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-            if 'bi' in model_name or 'ext' in model_name:
+            if 'bilr' == model_name or 'extlr' == model_name:
                 data, target, pos = tmp
-                data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+                data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
             elif model_name == 'dssm':
                 context, item, target, pos = tmp
-                context, item, target= context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+                context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
                 y = model(context, item)
+            elif model_name == 'bidssm':
+                context, item, target, pos = tmp
+                context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+                y = model(context, item, pos)
             else:
                 data, target, pos = tmp
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
@@ -148,7 +159,7 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name == 'dssm':
+    if model_name == 'dssm' or model_name == 'bidssm':
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
@@ -177,8 +188,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='dssm')
-    parser.add_argument('--epoch', type=int, default=10)
+    parser.add_argument('--model_name', default='bidssm')
+    parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
