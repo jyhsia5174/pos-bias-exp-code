@@ -40,8 +40,8 @@ def collate_fn_for_lr(batch):
     return data, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def collate_fn_for_dssm(batch):
-    item = [torch.LongTensor(i['item']) for i in batch]
     context = [torch.LongTensor(i['context']) for i in batch]
+    item = [torch.LongTensor(i['item']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
     if 0 in pos:
@@ -50,7 +50,7 @@ def collate_fn_for_dssm(batch):
     #data_length = [len(sq) for sq in data]
     item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
     context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-    return item, context, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
     if name == 'pos':
@@ -163,7 +163,7 @@ def main(dataset_name,
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
-    train_dataset = get_dataset(dataset_name, dataset_path, 'tr', False)
+    train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='bidssm')
+    parser.add_argument('--model_name', default='dssm')
     parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
