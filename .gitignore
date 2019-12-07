@@ -18,7 +18,7 @@ build/
 *.pt
 
 # model output
-*.pred
+*.pred*
 
 # data dir
 data/*

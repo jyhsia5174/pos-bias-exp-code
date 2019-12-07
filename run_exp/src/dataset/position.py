@@ -122,13 +122,16 @@ if __name__ == '__main__':
     #f = open('pos.svm', 'w')
     print(len(dataset))
     print(dataset.get_max_dim())
-    for i in range(len(dataset)):
-        sample_batch = dataset.__getitem__(i)
+    for idx in range(len(dataset)):
+        i = dataset[idx]
+        data = np.hstack((i['item'], i['context'])) 
+        label = i['label']
+        pos = i['pos']
         #if 1 in sample_batched['label']:
         #    print(i_batch, sample_batched)
         #    break
-        print(i, sample_batch)
-        if i> 10:
+        print(idx, data, label, pos)
+        if idx > 1:
             break
         #data = ['%d:1'%i for i in sorted(sample_batched['data'])] 
         #label = "+1" if sample_batched['label'] else "-1"

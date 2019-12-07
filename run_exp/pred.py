@@ -15,9 +15,10 @@ from src.model.bilr import BiLogisticRegression
 from src.model.extlr import ExtLogisticRegression
 from src.model.dssm import DSSM
 from src.model.bidssm import BiDSSM
+from src.model.extdssm import ExtDSSM
 from utility import recommend
 
-np.random.seed(0)
+np.random.seed(3)
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -79,17 +80,15 @@ def get_model(name, dataset):
         return DSSM(input_dims)
     elif name == 'bidssm':
         return BiDSSM(input_dims, 10)
+    elif name == 'extdssm':
+        return ExtDSSM(input_dims, 10)
     else:
         raise ValueError('unknown model name: ' + name)
 
 
 def pred(model, data_loader, device, model_name):
-    num_of_user = data_loader.batch_size//1055 
     k = 10
-    bids = np.random.gamma(20, 0.4, 1055)
-    gbids = torch.tensor(bids).expand(num_of_user, -1).flatten().to(device)
-    res = np.empty(num_of_user*k, dtype=np.int32)
-
+    bids = torch.tensor(np.random.gamma(20, 1/0.4, 1055))
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad(), open('tmp.pred', 'w') as fp:
@@ -102,7 +101,7 @@ def pred(model, data_loader, device, model_name):
                 context, item, target, pos = tmp
                 context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
                 y = model(context, item)
-            elif model_name == 'bidssm':
+            elif model_name == 'bidssm' or model_name == 'extdssm':
                 context, item, target, pos = tmp
                 context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(context, item, pos)
@@ -110,19 +109,17 @@ def pred(model, data_loader, device, model_name):
                 data, target, pos = tmp
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
                 y = model(data)
-            out = y*gbids
-            #print(out.shape)
+            num_of_user = y.size()[0]//1055
+            #print(y.reshape(-1, 1055).max(dim=1))
+            out = y*bids.repeat(num_of_user).to(device)
+            #print(out.reshape(-1, 1055).max(dim=1))
+            #sys.exit(0)
+            res = np.empty(num_of_user*k, dtype=np.int32)
             recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, 1055, k, res)
             _res = res.reshape(num_of_user, k)
             for r in range(num_of_user):
                 tmp = ['%d:%.4f'%(ad, bids[ad]) for ad in _res[r, :]]
                 fp.write('%s\n'%(' '.join(tmp)))
-            #if i>=2:
-            #    break
-            #targets.extend(torch.flatten(target.to(torch.int)).tolist())
-            #predicts.extend([j*2. for j in torch.flatten(y).tolist()])
-    #return predicts
-
 
 def main(dataset_name,
          dataset_path,
@@ -135,7 +132,7 @@ def main(dataset_name,
          device,
          save_dir):
     device = torch.device(device)
-    if model_name == 'dssm' or model_name == 'bidssm':
+    if model_name == 'dssm' or model_name == 'bidssm' or model_name == 'extdssm':
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
@@ -163,11 +160,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='dssm')
+    parser.add_argument('--model_name', default='lr')
     parser.add_argument('--model_path', help='the model path')
     #parser.add_argument('--epoch', type=int, default=10)
     #parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--batch_size', type=int, default=1055*20)
+    parser.add_argument('--batch_size', type=int, default=1055*50)
     #parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0')
     #parser.add_argument('--device', default='cpu')
