@@ -167,7 +167,7 @@ def main(dataset_name,
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
-    train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
+    train_dataset = get_dataset(dataset_name, dataset_path, 'trva-unif', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='extdssm')
+    parser.add_argument('--model_name', default='dssm')
     parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)

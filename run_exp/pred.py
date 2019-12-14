@@ -18,7 +18,7 @@ from src.model.bidssm import BiDSSM
 from src.model.extdssm import ExtDSSM
 from utility import recommend
 
-np.random.seed(3)
+#np.random.seed(3)
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -88,10 +88,10 @@ def get_model(name, dataset):
 
 def pred(model, data_loader, device, model_name):
     k = 10
-    bids = torch.tensor(np.random.gamma(20, 1/0.4, 1055))
+    #bids = torch.tensor(np.random.gamma(20, 1/0.4, 1055))
     model.eval()
     targets, predicts = list(), list()
-    with torch.no_grad(), open('tmp.pred', 'w') as fp:
+    with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
             if 'bilr' == model_name or 'extlr' == model_name:
                 data, target, pos = tmp
@@ -110,16 +110,21 @@ def pred(model, data_loader, device, model_name):
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
                 y = model(data)
             num_of_user = y.size()[0]//1055
-            #print(y.reshape(-1, 1055).max(dim=1))
-            out = y*bids.repeat(num_of_user).to(device)
-            #print(out.reshape(-1, 1055).max(dim=1))
-            #sys.exit(0)
-            res = np.empty(num_of_user*k, dtype=np.int32)
-            recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, 1055, k, res)
-            _res = res.reshape(num_of_user, k)
-            for r in range(num_of_user):
-                tmp = ['%d:%.4f'%(ad, bids[ad]) for ad in _res[r, :]]
-                fp.write('%s\n'%(' '.join(tmp)))
+            with open('dssm-unif.prob', 'a') as f:
+                y = y.tolist()
+                for j in range(num_of_user):
+                    f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
+            #for j in [0,3,4,5,6]:
+            #    with open('tmp.pred.%d'%j, 'a') as fp:
+            #        rng = np.random.RandomState(j)
+            #        bids = torch.tensor(rng.gamma(20, 1/0.4, 1055))
+            #        out = y*(bids.repeat(num_of_user).to(device))
+            #        res = np.empty(num_of_user*k, dtype=np.int32)
+            #        recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, 1055, k, res)
+            #        _res = res.reshape(num_of_user, k)
+            #        for r in range(num_of_user):
+            #            tmp = ['%d:%.4f'%(ad, bids[ad]) for ad in _res[r, :]]
+            #            fp.write('%s\n'%(' '.join(tmp)))
 
 def main(dataset_name,
          dataset_path,
