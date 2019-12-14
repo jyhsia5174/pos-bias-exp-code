@@ -16,6 +16,7 @@ from src.model.extlr import ExtLogisticRegression
 from src.model.dssm import DSSM
 from src.model.bidssm import BiDSSM
 from src.model.extdssm import ExtDSSM
+from src.model.xdfm import ExtremeDeepFactorizationMachineModel
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -79,6 +80,8 @@ def get_model(name, dataset):
         return BiDSSM(input_dims, 10)
     elif name == 'extdssm':
         return ExtDSSM(input_dims, 10)
+    elif name == 'xdfm':
+        return ExtremeDeepFactorizationMachineModel(input_dims)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -95,7 +98,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             data, target, pos = tmp
             data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
-        elif model_name == 'dssm':
+        elif model_name == 'dssm' or 'xdfm':
             context, item, target, pos = tmp
             context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
             y = model(context, item)
@@ -131,7 +134,7 @@ def test(model, data_loader, device, model_name):
                 data, target, pos = tmp
                 data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
-            elif model_name == 'dssm':
+            elif model_name == 'dssm' or 'xdfm':
                 context, item, target, pos = tmp
                 context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
                 y = model(context, item)
@@ -163,11 +166,11 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name == 'dssm' or model_name == 'bidssm' or model_name == 'extdssm':
+    if model_name == 'dssm' or model_name == 'bidssm' or model_name == 'extdssm' or model_name == 'xdfm':
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
-    train_dataset = get_dataset(dataset_name, dataset_path, 'trva-unif', False)
+    train_dataset = get_dataset(dataset_name, dataset_path, 'tr', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
@@ -192,7 +195,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='dssm')
+    parser.add_argument('--model_name', default='xdfm')
     parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
