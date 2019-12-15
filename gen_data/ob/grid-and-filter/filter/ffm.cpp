@@ -1322,13 +1322,13 @@ ImpDouble ImpProblem::func() {
     return 0.5*res;
 }
 
+const ImpInt max_t = 10;
 void ImpProblem::random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
     idx_list.clear();
 
     Vec probability_vec(z.size(), 1.0);
     //random_device rd;
     //mt19937 gen(rd());
-    const ImpInt max_t = 20;
     ImpInt t = 0;
     while( t < max_t ){
        discrete_distribution<> dis(probability_vec.begin(), probability_vec.end());
@@ -1355,7 +1355,6 @@ void ImpProblem::propensious_filter(const Vec& z, vector<pair<ImpLong, ImpDouble
     //random_device rd;
     //mt19937 gen(rd());
 
-    const ImpInt max_t = 20;
     ImpInt t = 0;
     while( t < max_t ){
        discrete_distribution<> dis(probability_vec.begin(), probability_vec.end());
@@ -1385,7 +1384,6 @@ void ImpProblem::determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>
     }
     sort(indices.begin(), indices.end(), Comp(z.data()));
     
-    const ImpInt max_t = 20;
     ImpInt t = 0;
     while( t < max_t ){
         idx_list.push_back( make_pair( indices[t], 1.0 ));
