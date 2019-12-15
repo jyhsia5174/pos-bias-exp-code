@@ -16,8 +16,7 @@ def init_pos_bias( gamma ):
 
 def change_label_to_zero( tk ):
     idx, label, prop = tk.split(":")
-    #return "{}:{}:{}".format(idx, '0', prop)
-    return "{}:{}".format(idx, '0')
+    return "{}:{}:{}".format(idx, '0', prop)
 
 def output_bias_file( file_name ):
     ofile_name = "{}.pos.bias".format(file_name)
@@ -26,15 +25,17 @@ def output_bias_file( file_name ):
     pos_bias_list = init_pos_bias( 1.0 )
     print(pos_bias_list)
     for line in rf:
-        toks = line.strip().strip(',').split(',')
+        labels = line.strip().split()[0]
+        feats = line.strip().split()[1:]
+        toks = labels.strip().strip(',').split(',')
         len(toks)
         for i, tk in enumerate(toks):
             if rd.random() >= pos_bias_list[i]:
                 toks[i] = change_label_to_zero(tk)
             else:
-                idx, label, _ = tk.split(":")
-                toks[i] = "{}:{}".format(idx, label)
-        of.write("{}\n".format(','.join(toks)))
+                idx, label, prop = tk.split(":")
+                toks[i] = "{}:{}:{}".format(idx, label, prop)
+        of.write("{} {}\n".format(','.join(toks), ' '.join(feats)))
 
 if __name__ == '__main__':
     output_bias_file(file)
