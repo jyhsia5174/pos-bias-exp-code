@@ -12,8 +12,8 @@ ds_path='../data/random'
 log_path="grid_logs"
 
 # others
-mn='bidssm'
-device='cuda:1'
+mn='dfm'
+device='cuda:0'
 
 task(){
 # Set up fixed parameter and train command
@@ -45,5 +45,5 @@ wait
 
 
 # Run
-#echo "Run"
-#task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
+echo "Run"
+task | xargs -0 -d '\n' -P 1 -I {} sh -c {}

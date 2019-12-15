@@ -19,10 +19,10 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         self.embed_output_dim = 2 * embed_dim
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout)
 
-    def forward(self, x):
+    def forward(self, x1, x2):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
-        embed_x = self.embedding(x)
-        x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
+        embed_x = self.embedding(x1, x2)
+        x = self.linear(x1, x2) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
         return torch.sigmoid(x.squeeze(1))
