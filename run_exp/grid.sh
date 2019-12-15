@@ -1,8 +1,8 @@
 # Train file path
-train='python grid.py'
+train='python main.py'
 
 # Fixed parameter
-epoch=10
+epoch=20
 
 # Data set
 ds='pos'
@@ -12,7 +12,7 @@ ds_path='../data/random'
 log_path="grid_logs"
 
 # others
-mn='bilr'
+mn='xdfm'
 device='cuda:0'
 
 task(){
@@ -46,5 +46,4 @@ wait
 
 # Run
 echo "Run"
-#task | xargs -0 -d '\n' -P 1 -I {} sh -c {} &
 task | xargs -0 -d '\n' -P 1 -I {} sh -c {}

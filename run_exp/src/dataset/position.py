@@ -70,7 +70,7 @@ class PositionDataset(Dataset):
                 context = [int(i.split(':')[0]) for i in context.split(' ')]
                 pairs = list()
                 for l in labels:   
-                    item_idx, flag = l.split(':')
+                    item_idx, flag = l.split(':')[:2]
                     pairs.extend([int(item_idx), int(flag)])
                 feature = pairs + sorted(context)
                 if  feature[-1] > max_dim:
@@ -95,7 +95,7 @@ class PositionDataset(Dataset):
                 item_idx = np_array[pos*2]
                 flag = np_array[pos*2 + 1]
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np.hstack((item, np_array[20:]))  # item + context
+                data = np_array[20:]  # context
             pos += 1
         else:
             context_idx = int(idx)//self.item_num
@@ -105,7 +105,7 @@ class PositionDataset(Dataset):
                 item_idx = int(idx)%self.item_num 
                 flag = -1
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np_array[20:]  # item + context
+                data = np_array[2:]  # item + context
         if self.tr_max_dim > 0:
             data = data[data <= self.tr_max_dim]
         return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx}  # pos \in {1,2,...9,10}, 0 for no-position
@@ -117,18 +117,21 @@ class PositionDataset(Dataset):
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
-    dataset = PositionDataset(dataset_path='../../../data/random', data_prefix='trva', rebuild_cache=False, tr_max_dim=-1, test_flag=False)
+    dataset = PositionDataset(dataset_path='../../../data/random', data_prefix='gt', rebuild_cache=False, tr_max_dim=-1, test_flag=1)
     print('Start loading!')
     #f = open('pos.svm', 'w')
     print(len(dataset))
     print(dataset.get_max_dim())
-    for i in range(len(dataset)):
-        sample_batch = dataset.__getitem__(i)
+    for idx in range(len(dataset)):
+        i = dataset[idx]
+        data = np.hstack((i['item'], i['context'])) 
+        label = i['label']
+        pos = i['pos']
         #if 1 in sample_batched['label']:
         #    print(i_batch, sample_batched)
         #    break
-        print(i, sample_batch)
-        if i> 10:
+        print(idx, data, label, pos)
+        if idx > 1:
             break
         #data = ['%d:1'%i for i in sorted(sample_batched['data'])] 
         #label = "+1" if sample_batched['label'] else "-1"

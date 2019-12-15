@@ -1,4 +1,5 @@
 import torch
+import os
 import time
 import tqdm
 import numpy as np
@@ -11,6 +12,17 @@ from src.dataset.position import PositionDataset
 from src.dataset.a9a import A9ADataset
 from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
+from src.model.extlr import ExtLogisticRegression
+from src.model.dssm import DSSM
+from src.model.bidssm import BiDSSM
+from src.model.extdssm import ExtDSSM
+from utility import recommend
+
+#np.random.seed(3)
+
+def mkdir_if_not_exist(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def hook(self, input, output):
     tmp = torch.sigmoid(output.data).flatten().tolist()
@@ -20,16 +32,29 @@ def hook(self, input, output):
     print(tmp)
     print(ratio, np.mean(ratio[1:]))
 
-def collate_fn(batch):
-    data = [torch.LongTensor(i['data']) for i in batch]
+def collate_fn_for_lr(batch):
+    data = [torch.LongTensor(np.hstack((i['item'], i['context']))) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
     #if 0 in pos:
     #    print("The position padding_idx occurs!")
     #data.sort(key=lambda x: len(x), reverse=True)
-    data_length = [len(sq) for sq in data]
+    #data_length = [len(sq) for sq in data]
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
-    return data, data_length, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+    return data, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+
+def collate_fn_for_dssm(batch):
+    context = [torch.LongTensor(i['context']) for i in batch]
+    item = [torch.LongTensor(i['item']) for i in batch]
+    label = [i['label'] for i in batch]
+    pos = [i['pos'] for i in batch]
+    #if 0 in pos:
+    #    print("The position padding_idx occurs!")
+    #data.sort(key=lambda x: len(x), reverse=True)
+    #data_length = [len(sq) for sq in data]
+    item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
+    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
+    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
@@ -49,28 +74,57 @@ def get_model(name, dataset):
         return LogisticRegression(input_dims)
     elif name == 'bilr':
         return BiLogisticRegression(input_dims, 10)
+    elif name == 'extlr':
+        return ExtLogisticRegression(input_dims, 10)
+    elif name == 'dssm':
+        return DSSM(input_dims)
+    elif name == 'bidssm':
+        return BiDSSM(input_dims, 10)
+    elif name == 'extdssm':
+        return ExtDSSM(input_dims, 10)
     else:
         raise ValueError('unknown model name: ' + name)
 
 
 def pred(model, data_loader, device, model_name):
+    k = 10
+    #bids = torch.tensor(np.random.gamma(20, 1/0.4, 1055))
     model.eval()
     targets, predicts = list(), list()
-    with torch.no_grad(), open('tmp.pred', 'w') as fp:
+    with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-            data, data_len, target, pos = tmp
-            if 'bi' in model_name:
-                data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+            if 'bilr' == model_name or 'extlr' == model_name:
+                data, target, pos = tmp
+                data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
+            elif model_name == 'dssm':
+                context, item, target, pos = tmp
+                context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+                y = model(context, item)
+            elif model_name == 'bidssm' or model_name == 'extdssm':
+                context, item, target, pos = tmp
+                context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+                y = model(context, item, pos)
             else:
+                data, target, pos = tmp
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
                 y = model(data)
-            for p in torch.flatten(y).tolist():
-                fp.write('%.4f\n'%(p*2.))
-            #targets.extend(torch.flatten(target.to(torch.int)).tolist())
-            #predicts.extend([j*2. for j in torch.flatten(y).tolist()])
-    #return predicts
-
+            num_of_user = y.size()[0]//1055
+            with open('dssm-unif.prob', 'a') as f:
+                y = y.tolist()
+                for j in range(num_of_user):
+                    f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
+            #for j in [0,3,4,5,6]:
+            #    with open('tmp.pred.%d'%j, 'a') as fp:
+            #        rng = np.random.RandomState(j)
+            #        bids = torch.tensor(rng.gamma(20, 1/0.4, 1055))
+            #        out = y*(bids.repeat(num_of_user).to(device))
+            #        res = np.empty(num_of_user*k, dtype=np.int32)
+            #        recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, 1055, k, res)
+            #        _res = res.reshape(num_of_user, k)
+            #        for r in range(num_of_user):
+            #            tmp = ['%d:%.4f'%(ad, bids[ad]) for ad in _res[r, :]]
+            #            fp.write('%s\n'%(' '.join(tmp)))
 
 def main(dataset_name,
          dataset_path,
@@ -83,6 +137,10 @@ def main(dataset_name,
          device,
          save_dir):
     device = torch.device(device)
+    if model_name == 'dssm' or model_name == 'bidssm' or model_name == 'extdssm':
+        collate_fn = collate_fn_for_dssm 
+    else:
+        collate_fn = collate_fn_for_lr 
     train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'gt', False, train_dataset.get_max_dim() - 1, True)
     #train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
@@ -107,11 +165,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='bilr')
+    parser.add_argument('--model_name', default='lr')
     parser.add_argument('--model_path', help='the model path')
     #parser.add_argument('--epoch', type=int, default=10)
     #parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--batch_size', type=int, default=8192)
+    parser.add_argument('--batch_size', type=int, default=1055*50)
     #parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0')
     #parser.add_argument('--device', default='cpu')

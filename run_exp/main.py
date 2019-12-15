@@ -14,6 +14,9 @@ from src.model.lr import LogisticRegression
 from src.model.bilr import BiLogisticRegression
 from src.model.extlr import ExtLogisticRegression
 from src.model.dssm import DSSM
+from src.model.bidssm import BiDSSM
+from src.model.extdssm import ExtDSSM
+from src.model.xdfm import ExtremeDeepFactorizationMachineModel
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -39,8 +42,8 @@ def collate_fn_for_lr(batch):
     return data, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def collate_fn_for_dssm(batch):
-    item = [torch.LongTensor(i['item']) for i in batch]
     context = [torch.LongTensor(i['context']) for i in batch]
+    item = [torch.LongTensor(i['item']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
     if 0 in pos:
@@ -49,7 +52,7 @@ def collate_fn_for_dssm(batch):
     #data_length = [len(sq) for sq in data]
     item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
     context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-    return item, context, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
     if name == 'pos':
@@ -73,6 +76,12 @@ def get_model(name, dataset):
         return ExtLogisticRegression(input_dims, 10)
     elif name == 'dssm':
         return DSSM(input_dims)
+    elif name == 'bidssm':
+        return BiDSSM(input_dims, 10)
+    elif name == 'extdssm':
+        return ExtDSSM(input_dims, 10)
+    elif name == 'xdfm':
+        return ExtremeDeepFactorizationMachineModel(input_dims)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -85,17 +94,22 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)
     for i, tmp in enumerate(pbar):
-        if 'bi' in model_name or 'ext' in model_name:
+        if 'bilr' == model_name or 'extlr' == model_name:
             data, target, pos = tmp
-            data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+            data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
-        elif model_name == 'dssm':
+        elif model_name == 'dssm' or 'xdfm':
             context, item, target, pos = tmp
-            context, item, target= context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+            context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
             y = model(context, item)
+        elif model_name == 'bidssm' or model_name == 'extdssm':
+            context, item, target, pos = tmp
+            context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+            y = model(context, item, pos)
         else:
             data, target, pos = tmp
             data, target = data.to(device, torch.long), target.to(device, torch.float)
+            #print(data[0, :])
             y = model(data)
         loss = criterion(y, target.float())
         model.zero_grad()
@@ -116,14 +130,18 @@ def test(model, data_loader, device, model_name):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-            if 'bi' in model_name or 'ext' in model_name:
+            if 'bilr' == model_name or 'extlr' == model_name:
                 data, target, pos = tmp
-                data, target, pos= data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+                data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
-            elif model_name == 'dssm':
+            elif model_name == 'dssm' or 'xdfm':
                 context, item, target, pos = tmp
-                context, item, target= context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+                context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
                 y = model(context, item)
+            elif model_name == 'bidssm' or model_name == 'extdssm':
+                context, item, target, pos = tmp
+                context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+                y = model(context, item, pos)
             else:
                 data, target, pos = tmp
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
@@ -148,7 +166,7 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name == 'dssm':
+    if model_name == 'dssm' or model_name == 'bidssm' or model_name == 'extdssm' or model_name == 'xdfm':
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
@@ -177,8 +195,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='dssm')
-    parser.add_argument('--epoch', type=int, default=10)
+    parser.add_argument('--model_name', default='xdfm')
+    parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
