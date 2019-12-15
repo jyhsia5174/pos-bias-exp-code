@@ -98,7 +98,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             data, target, pos = tmp
             data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
-        elif model_name == 'dssm' or 'xdfm':
+        elif model_name == 'dssm' or model_name == 'xdfm':
             context, item, target, pos = tmp
             context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
             y = model(context, item)
@@ -134,7 +134,7 @@ def test(model, data_loader, device, model_name):
                 data, target, pos = tmp
                 data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
-            elif model_name == 'dssm' or 'xdfm':
+            elif model_name == 'dssm' or model_name == 'xdfm':
                 context, item, target, pos = tmp
                 context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
                 y = model(context, item)

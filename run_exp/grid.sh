@@ -2,7 +2,7 @@
 train='python main.py'
 
 # Fixed parameter
-epoch=20
+epoch=30
 
 # Data set
 ds='pos'
@@ -12,8 +12,8 @@ ds_path='../data/random'
 log_path="grid_logs"
 
 # others
-mn='xdfm'
-device='cuda:0'
+mn='bidssm'
+device='cuda:1'
 
 task(){
 # Set up fixed parameter and train command
