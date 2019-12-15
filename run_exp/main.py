@@ -17,6 +17,8 @@ from src.model.dssm import DSSM
 from src.model.bidssm import BiDSSM
 from src.model.extdssm import ExtDSSM
 from src.model.xdfm import ExtremeDeepFactorizationMachineModel
+from src.model.dfm import DeepFactorizationMachineModel
+from src.model.dcn import DeepCrossNetworkModel
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -82,6 +84,10 @@ def get_model(name, dataset):
         return ExtDSSM(input_dims, 10)
     elif name == 'xdfm':
         return ExtremeDeepFactorizationMachineModel(input_dims)
+    elif name == 'dfm':
+        return DeepFactorizationMachineModel(input_dims, embed_dim=16, mlp_dims=(16, 16), dropout=0.2)
+    elif name == 'dcn':
+        return DeepCrossNetworkModel(input_dims, embed_dim=16, num_layers=3, mlp_dims=(16, 16), dropout=0.2)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -98,7 +104,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             data, target, pos = tmp
             data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
             y = model(data, pos)
-        elif model_name == 'dssm' or model_name == 'xdfm':
+        elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
             context, item, target, pos = tmp
             context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
             y = model(context, item)
@@ -134,7 +140,7 @@ def test(model, data_loader, device, model_name):
                 data, target, pos = tmp
                 data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
                 y = model(data, pos)
-            elif model_name == 'dssm' or model_name == 'xdfm':
+            elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
                 context, item, target, pos = tmp
                 context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
                 y = model(context, item)
@@ -166,7 +172,7 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name == 'dssm' or model_name == 'bidssm' or model_name == 'extdssm' or model_name == 'xdfm':
+    if model_name in ['dssm', 'bidssm', 'extdssm', 'xdfm', 'dfm', 'dcn']:
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
