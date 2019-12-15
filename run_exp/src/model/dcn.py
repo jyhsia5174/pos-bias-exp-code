@@ -1,6 +1,6 @@
 import torch
 
-from layer import FeaturesEmbedding, CrossNetwork, MultiLayerPerceptron
+from src.model.layer import FeaturesEmbedding, CrossNetwork, MultiLayerPerceptron
 
 
 class DeepCrossNetworkModel(torch.nn.Module):

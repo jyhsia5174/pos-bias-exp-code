@@ -1,6 +1,6 @@
 import torch
 
-from layer import FactorizationMachine, FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
+from src.model.layer import FactorizationMachine, FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
 
 
 class DeepFactorizationMachineModel(torch.nn.Module):
