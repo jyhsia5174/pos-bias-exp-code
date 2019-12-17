@@ -12,7 +12,11 @@ ds_path='../data/random'
 log_path="grid_logs"
 
 # others
+<<<<<<< HEAD
 mn='xdfm'
+=======
+mn='dfm'
+>>>>>>> d667a01ce24e2f4c8eeb953bfc67200f791232b8
 device='cuda:0'
 
 task(){
@@ -45,5 +49,5 @@ wait
 
 
 # Run
-#echo "Run"
-#task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
+echo "Run"
+task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
