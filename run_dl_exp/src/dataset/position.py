@@ -24,6 +24,7 @@ class PositionDataset(Dataset):
             if dataset_path is None:
                 raise ValueError('create cache: failed: dataset_path is None')
             self.__build_cache(data_path, item_path, cache_path)
+        print('Reading data from %s.'%(cache_path))
         self.env = lmdb.open(cache_path, create=False, lock=False, readonly=True)
         with self.env.begin(write=False) as txn:
             self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
