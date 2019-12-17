@@ -162,6 +162,7 @@ def test(model, data_loader, device, model_name):
 
 
 def main(dataset_name,
+         dataset_part,
          dataset_path,
          model_name,
          epoch,
@@ -176,20 +177,22 @@ def main(dataset_name,
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
-    train_dataset = get_dataset(dataset_name, dataset_path, 'tr', False)
+    train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
     valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
     model = get_model(model_name, train_dataset).to(device)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
+    model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), dataset_part])
     with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
         for epoch_i in range(epoch):
             tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
             va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
             print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
             log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
+            #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
+            #log.write('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
     #auc = test(model, valid_data_loader, device)
     #print('test auc:', auc)
     torch.save(model, f'{save_dir}/{model_file_name}.pt')
@@ -200,8 +203,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
+    parser.add_argument('--dataset_part', default='trva')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
-    parser.add_argument('--model_name', default='xdfm')
+    parser.add_argument('--model_name', default='dssm')
     parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
@@ -211,6 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_dir', default='tmp')
     args = parser.parse_args()
     main(args.dataset_name,
+         args.dataset_part,
          args.dataset_path,
          args.model_name,
          args.epoch,

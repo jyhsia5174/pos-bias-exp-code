@@ -70,7 +70,11 @@ class PositionDataset(Dataset):
                 context = [int(i.split(':')[0]) for i in context.split(' ')]
                 pairs = list()
                 for l in labels:   
-                    item_idx, flag = l.split(':')[:2]
+                    try:
+                        item_idx, flag = l.split(':')[:2]
+                    except:
+                        item_idx = l
+                        flag = '1'
                     pairs.extend([int(item_idx), int(flag)])
                 feature = pairs + sorted(context)
                 if  feature[-1] > max_dim:
@@ -114,6 +118,8 @@ class PositionDataset(Dataset):
     def get_max_dim(self):
         return self.max_dim
 
+    def get_item_num(self):
+        return self.item_num
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader

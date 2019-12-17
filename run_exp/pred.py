@@ -86,7 +86,7 @@ def get_model(name, dataset):
         raise ValueError('unknown model name: ' + name)
 
 
-def pred(model, data_loader, device, model_name):
+def pred(model, data_loader, device, model_name, item_num):
     k = 10
     #bids = torch.tensor(np.random.gamma(20, 1/0.4, 1055))
     model.eval()
@@ -109,24 +109,25 @@ def pred(model, data_loader, device, model_name):
                 data, target, pos = tmp
                 data, target = data.to(device, torch.long), target.to(device, torch.float)
                 y = model(data)
-            num_of_user = y.size()[0]//1055
-            with open('dssm-unif.prob', 'a') as f:
-                y = y.tolist()
-                for j in range(num_of_user):
-                    f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
-            #for j in [0,3,4,5,6]:
-            #    with open('tmp.pred.%d'%j, 'a') as fp:
-            #        rng = np.random.RandomState(j)
-            #        bids = torch.tensor(rng.gamma(20, 1/0.4, 1055))
-            #        out = y*(bids.repeat(num_of_user).to(device))
-            #        res = np.empty(num_of_user*k, dtype=np.int32)
-            #        recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, 1055, k, res)
-            #        _res = res.reshape(num_of_user, k)
-            #        for r in range(num_of_user):
-            #            tmp = ['%d:%.4f'%(ad, bids[ad]) for ad in _res[r, :]]
-            #            fp.write('%s\n'%(' '.join(tmp)))
+            num_of_user = y.size()[0]//item_num
+            #with open('dssm-unif.prob', 'a') as f:
+            #    y = y.tolist()
+            #    for j in range(num_of_user):
+            #        f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
+            for j in [0,3,4,5,6]:
+                with open('tmp.pred.%d'%j, 'a') as fp:
+                    rng = np.random.RandomState(j)
+                    bids = torch.tensor(rng.gamma(20, 1/0.4, item_num))
+                    out = y*(bids.repeat(num_of_user).to(device))
+                    res = np.empty(num_of_user*k, dtype=np.int32)
+                    recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, item_num, k, res)
+                    _res = res.reshape(num_of_user, k)
+                    for r in range(num_of_user):
+                        tmp = ['%d:%.4f'%(ad, bids[ad]) for ad in _res[r, :]]
+                        fp.write('%s\n'%(' '.join(tmp)))
 
 def main(dataset_name,
+         dataset_part,
          dataset_path,
          model_name,
          model_path,
@@ -141,10 +142,11 @@ def main(dataset_name,
         collate_fn = collate_fn_for_dssm 
     else:
         collate_fn = collate_fn_for_lr 
-    train_dataset = get_dataset(dataset_name, dataset_path, 'trva', False)
-    valid_dataset = get_dataset(dataset_name, dataset_path, 'gt', False, train_dataset.get_max_dim() - 1, True)
+    train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
+    valid_dataset = get_dataset(dataset_name, dataset_path, dataset_part.replace('trva', 'gt'), False, train_dataset.get_max_dim() - 1, True)
+    item_num = valid_dataset.get_item_num()
     #train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
-    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
+    valid_data_loader = DataLoader(valid_dataset, batch_size=int(batch_size*item_num), num_workers=8, collate_fn=collate_fn)
     #model = get_model(model_name, train_dataset).to(device)
     #criterion = torch.nn.BCELoss()
     #optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -153,7 +155,7 @@ def main(dataset_name,
     #    auc, logloss = test(model, valid_data_loader, device, model_name)
     #    print('epoch:', epoch_i, 'validation: auc:', auc, 'logloss:', logloss)
     model = torch.load(model_path)
-    pred(model, valid_data_loader, device, model_name)
+    pred(model, valid_data_loader, device, model_name, item_num)
     #print('test auc:', auc)
     #model_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size)])
     #torch.save(model, f'{save_dir}/{model_name}.pt')
@@ -164,18 +166,20 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
+    parser.add_argument('--dataset_part', default='trva')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
     parser.add_argument('--model_name', default='lr')
     parser.add_argument('--model_path', help='the model path')
     #parser.add_argument('--epoch', type=int, default=10)
     #parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--batch_size', type=int, default=1055*50)
+    parser.add_argument('--batch_size', type=int, default=500)
     #parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0')
     #parser.add_argument('--device', default='cpu')
     parser.add_argument('--save_dir', default='tmp')
     args = parser.parse_args()
     main(args.dataset_name,
+         args.dataset_part,
          args.dataset_path,
          args.model_name,
          args.model_path,

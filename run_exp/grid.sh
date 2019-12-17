@@ -12,8 +12,8 @@ ds_path='../data/random'
 log_path="grid_logs"
 
 # others
-mn='bidssm'
-device='cuda:1'
+mn='xdfm'
+device='cuda:0'
 
 task(){
 # Set up fixed parameter and train command
