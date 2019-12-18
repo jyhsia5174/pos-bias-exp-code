@@ -19,6 +19,7 @@ from src.model.extdssm import ExtDSSM
 from src.model.xdfm import ExtremeDeepFactorizationMachineModel
 from src.model.dfm import DeepFactorizationMachineModel
 from src.model.dcn import DeepCrossNetworkModel
+from utility import recommend
 
 
 def mkdir_if_not_exist(path):
