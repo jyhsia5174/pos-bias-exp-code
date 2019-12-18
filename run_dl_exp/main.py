@@ -20,6 +20,7 @@ from src.model.xdfm import ExtremeDeepFactorizationMachineModel
 from src.model.dfm import DeepFactorizationMachineModel
 from src.model.dcn import DeepCrossNetworkModel
 
+
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -36,8 +37,8 @@ def collate_fn_for_lr(batch):
     data = [torch.LongTensor(np.hstack((i['item'], i['context']))) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
-    if 0 in pos:
-        print("The position padding_idx occurs!")
+    #if 0 in pos:
+    #    print("The position padding_idx occurs!")
     #data.sort(key=lambda x: len(x), reverse=True)
     #data_length = [len(sq) for sq in data]
     data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
@@ -48,8 +49,8 @@ def collate_fn_for_dssm(batch):
     item = [torch.LongTensor(i['item']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
-    if 0 in pos:
-        print("The position padding_idx occurs!")
+    #if 0 in pos:
+    #    print("The position padding_idx occurs!")
     #data.sort(key=lambda x: len(x), reverse=True)
     #data_length = [len(sq) for sq in data]
     item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
@@ -63,7 +64,6 @@ def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
         return A9ADataset(path, training)
     else:
         raise ValueError('unknown dataset name: ' + name)
-
 
 def get_model(name, dataset):
     """
@@ -92,6 +92,26 @@ def get_model(name, dataset):
         raise ValueError('unknown model name: ' + name)
 
 
+def model_helper(data_pack, model, model_name, device):
+    if model_name in ['bilr', 'extlr']:
+        data, target, pos = data_pack
+        data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+        y = model(data, pos)
+    elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
+        context, item, target, pos = data_pack
+        context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
+        y = model(context, item)
+    elif model_name in ['bidssm', 'extdssm']:
+        context, item, target, pos = data_pack
+        context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
+        y = model(context, item, pos)
+    else:
+        data, target, pos = data_pack
+        data, target = data.to(device, torch.long), target.to(device, torch.float)
+        y = model(data)
+    return y, target
+
+
 def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=10):
     model.train()
     #handle = model.fc2.register_forward_hook(hook)
@@ -100,23 +120,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)
     for i, tmp in enumerate(pbar):
-        if 'bilr' == model_name or 'extlr' == model_name:
-            data, target, pos = tmp
-            data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-            y = model(data, pos)
-        elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
-            context, item, target, pos = tmp
-            context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
-            y = model(context, item)
-        elif model_name == 'bidssm' or model_name == 'extdssm':
-            context, item, target, pos = tmp
-            context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-            y = model(context, item, pos)
-        else:
-            data, target, pos = tmp
-            data, target = data.to(device, torch.long), target.to(device, torch.float)
-            #print(data[0, :])
-            y = model(data)
+        y, target = model_helper(tmp, model, model_name, device)
         loss = criterion(y, target.float())
         model.zero_grad()
         loss.backward()
@@ -136,35 +140,47 @@ def test(model, data_loader, device, model_name):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
-            if 'bilr' == model_name or 'extlr' == model_name:
-                data, target, pos = tmp
-                data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-                y = model(data, pos)
-            elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
-                context, item, target, pos = tmp
-                context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
-                y = model(context, item)
-            elif model_name == 'bidssm' or model_name == 'extdssm':
-                context, item, target, pos = tmp
-                context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-                y = model(context, item, pos)
-            else:
-                data, target, pos = tmp
-                data, target = data.to(device, torch.long), target.to(device, torch.float)
-                y = model(data)
+            y, target = model_helper(tmp, model, model_name, device)
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
-    #print(targets[:10], predicts[:10])
-    #print(predicts[np.argmax(targets)])
-    #print(min(targets), min(predicts))
-    #print(set(targets))
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
+
+
+def pred(model, data_loader, device, model_name, item_num):
+    num_of_pos = 10
+    res = np.empty(data_loader.batch_size//item_num*num_of_pos, dtype=np.int32)
+    rngs = [np.random.RandomState(seed) for seed in [0,3,4,5,6]]
+    bids = np.empty((len(rngs), item_num)) 
+    for i, rng in enumerate(rngs):
+        bids[i, :] = rng.gamma(20, 1/0.4, item_num)
+    bids = torch.tensor(bids).to(device)
+
+    model.eval()
+    targets, predicts = list(), list()
+    with torch.no_grad():
+        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
+            y, target = model_helper(tmp, model, model_name, device)
+            num_of_user = y.size()[0]//item_num
+            #with open('dssm-unif.prob', 'a') as f:
+            #    y = y.tolist()
+            #    for j in range(num_of_user):
+            #        f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
+            for j in range(len(rngs)):
+                with open('tmp.pred.%d'%j, 'a') as fp:
+                    out = y*(bids[j, :].repeat(num_of_user))
+                    recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, item_num, num_of_pos, res[:num_of_user*num_of_pos])
+                    _res = res[:num_of_user*num_of_pos].reshape(num_of_user, num_of_pos)
+                    for r in range(num_of_user):
+                        tmp = ['%d:%.4f'%(ad, bids[j, ad]) for ad in _res[r, :]]
+                        fp.write('%s\n'%(' '.join(tmp)))
 
 
 def main(dataset_name,
          dataset_part,
          dataset_path,
+         flag,
          model_name,
+         model_path,
          epoch,
          learning_rate,
          batch_size,
@@ -173,29 +189,39 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name in ['dssm', 'bidssm', 'extdssm', 'xdfm', 'dfm', 'dcn']:
-        collate_fn = collate_fn_for_dssm 
+    if flag == 'train':
+        if model_name in ['dssm', 'bidssm', 'extdssm', 'xdfm', 'dfm', 'dcn']:
+            collate_fn = collate_fn_for_dssm  # output data: [context, item, pos]
+        else:
+            collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
+        train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
+        model = get_model(model_name, train_dataset).to(device)
+        criterion = torch.nn.BCELoss()
+        optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), dataset_part])
+        with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
+            for epoch_i in range(epoch):
+                tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
+                va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
+                print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
+                log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
+                #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
+                #log.write('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
+        torch.save(model, f'{save_dir}/{model_file_name}.pt')
+    elif flag == 'test':
+        train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, 'gt', False, train_dataset.get_max_dim() - 1, True)
+        item_num = valid_dataset.get_item_num()
+        refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
+        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, collate_fn=collate_fn)
+        model = torch.load(model_path)
+        pred(model, valid_data_loader, device, model_name, item_num)
     else:
-        collate_fn = collate_fn_for_lr 
-    train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
-    valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
-    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
-    model = get_model(model_name, train_dataset).to(device)
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), dataset_part])
-    with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
-        for epoch_i in range(epoch):
-            tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
-            va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
-            print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
-            log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
-            #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
-            #log.write('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
-    #auc = test(model, valid_data_loader, device)
-    #print('test auc:', auc)
-    torch.save(model, f'{save_dir}/{model_file_name}.pt')
+        raise ValueError('Flag should be "train"/"test"!')
+
 
 
 if __name__ == '__main__':
@@ -204,20 +230,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--dataset_part', default='trva')
-    parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm')
+    parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm trva.svm')
+    parser.add_argument('--flag', default='train')
     parser.add_argument('--model_name', default='dssm')
-    parser.add_argument('--epoch', type=int, default=20)
+    parser.add_argument('--model_path', default='', help='the path of model file')
+    parser.add_argument('--epoch', type=int, default=30)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
-    parser.add_argument('--device', default='cuda:0')
-    #parser.add_argument('--device', default='cpu')
-    parser.add_argument('--save_dir', default='tmp')
+    parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
+    parser.add_argument('--save_dir', default='logs')
     args = parser.parse_args()
     main(args.dataset_name,
          args.dataset_part,
          args.dataset_path,
+         args.flag,
          args.model_name,
+         args.model_path,
          args.epoch,
          args.learning_rate,
          args.batch_size,
