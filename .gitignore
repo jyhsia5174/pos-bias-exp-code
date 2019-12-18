@@ -24,6 +24,8 @@ build/
 # data dir
 data
 data/*
+Pva*
+Qva*
 
 # binary
 *.o

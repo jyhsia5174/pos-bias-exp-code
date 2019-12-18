@@ -5,7 +5,7 @@ train='./hytrain'
 t=50
 wn=1
 r=-1
-c=8
+c=5
 
 # Data set
 tr='tr.ffm'
@@ -22,11 +22,11 @@ task(){
 train_cmd="${train} -t ${t} -wn ${wn} -r ${r} -c ${c} --ns"
 
 # Print out all parameter pair
-for l in 16 #32 64 128
+for l in 16 32 64
 do
     for w in 0 
     do
-        for k in 64 16 32
+        for k in 16 32 64
         do
             cmd=${train_cmd}
             cmd="${cmd} -l ${l}"
