@@ -21,11 +21,12 @@ build/
 *.pred*
 *.prob*
 
-# data dir
+# data 
 data
 data/*
 Pva*
 Qva*
+*.lmdb
 
 # binary
 *.o

@@ -1,29 +1,34 @@
+# Init
+#source activate py3.7
+
 # Train file path
-train='python main.py'
+train='python ../main.py'
 
 # Fixed parameter
+flag='train'
 epoch=30
+batch_size=8192
 
 # Data set
 ds='pos'
 ds_part='tr'
-ds_path='../data/random'
+ds_path='./'
 
 # Log path
 log_path="grid_logs"
 
 # others
-mn='xdfm'
-device='cuda:0'
+mn='dssm'
+device='cuda:1'
 
 task(){
 # Set up fixed parameter and train command
-train_cmd="${train} --epoch ${epoch} --dataset_name ${ds} --dataset_part ${ds_part} --dataset_path ${ds_path} --model_name ${mn} --device ${device} --save_dir ${log_path}"
+train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --dataset_path ${ds_path} --flag ${flag} --model_name ${mn} --epoch ${epoch} --device ${device} --save_dir ${log_path}"
 
 # Print out all parameter pair
-for lr in 0.001 #0.0001 0.01 0.001
+for lr in 0.01 0.001 0.0001
 do
-    for wd in 1e-8 #1e-6 1e-4 1e-8
+    for wd in 1e-4 1e-6 1e-8
     do
         for bs in 8192 
         do
@@ -42,7 +47,7 @@ done
 # Check command
 echo "Check command list (the command may not be runned!!)"
 task
-wait
+#wait
 
 
 # Run
