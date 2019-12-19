@@ -11,7 +11,7 @@ c=5
 
 # Data setr
 tr='trva.ffm'
-va='va.ffm'
+va='gt.ffm'
 item='item.ffm'
 
 # Log path
