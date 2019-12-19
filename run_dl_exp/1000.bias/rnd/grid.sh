@@ -2,7 +2,7 @@
 #source activate py3.7
 
 # Train file path
-train='python ../main.py'
+train='python ../../main.py'
 
 # Fixed parameter
 flag='train'
@@ -26,7 +26,7 @@ task(){
 train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --dataset_path ${ds_path} --flag ${flag} --model_name ${mn} --epoch ${epoch} --device ${device} --save_dir ${log_path}"
 
 # Print out all parameter pair
-for lr in 0.01 0.001 0.0001
+for lr in 0.0001 0.001 0.01
 do
     for wd in 1e-4 1e-6 1e-8
     do

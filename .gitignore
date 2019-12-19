@@ -8,7 +8,6 @@ build/
 
 # tmp file
 *.pyc
-*.pyx
 *.tmp
 *.so
 
