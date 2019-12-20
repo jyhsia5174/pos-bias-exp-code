@@ -66,7 +66,7 @@ def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
     else:
         raise ValueError('unknown dataset name: ' + name)
 
-def get_model(name, dataset):
+def get_model(name, dataset, embed_dim):
     """
     Hyperparameters are empirically determined, not opitmized.
     """
@@ -84,11 +84,11 @@ def get_model(name, dataset):
     elif name == 'extdssm':
         return ExtDSSM(input_dims, 10)
     elif name == 'xdfm':
-        return ExtremeDeepFactorizationMachineModel(input_dims)
+        return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=32, mlp_dims=(16, 16), dropout=0.2, cross_layer_sizes=(16, 16), split_half=True)
     elif name == 'dfm':
-        return DeepFactorizationMachineModel(input_dims, embed_dim=16, mlp_dims=(16, 16), dropout=0.2)
+        return DeepFactorizationMachineModel(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     elif name == 'dcn':
-        return DeepCrossNetworkModel(input_dims, embed_dim=16, num_layers=3, mlp_dims=(16, 16), dropout=0.2)
+        return DeepCrossNetworkModel(input_dims, embed_dim=embed_dim, num_layers=3, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     else:
         raise ValueError('unknown model name: ' + name)
 
@@ -185,6 +185,7 @@ def main(dataset_name,
          epoch,
          learning_rate,
          batch_size,
+         embed_dim,
          weight_decay,
          device,
          save_dir):
@@ -199,7 +200,7 @@ def main(dataset_name,
         valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
-        model = get_model(model_name, train_dataset).to(device)
+        model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), dataset_part])
@@ -238,6 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default=30)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=int, default=8192)
+    parser.add_argument('--embed_dim', type=int, default=16)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
@@ -251,6 +253,7 @@ if __name__ == '__main__':
          args.epoch,
          args.learning_rate,
          args.batch_size,
+         args.embed_dim,
          args.weight_decay,
          args.device,
          args.save_dir)
