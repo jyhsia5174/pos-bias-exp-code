@@ -6,7 +6,7 @@ train='./hytrain'
 
 # Fixed parameter
 wn=1
-k=32
+k=64
 c=5
 
 # Data setr
@@ -25,7 +25,7 @@ train_cmd="${train} -wn ${wn} -k ${k} -c ${c} --ns"
 
 # Print out all parameter pair
 t=50
-l=32
+l=16
 w=0
 r=-1
 cmd=${train_cmd}
@@ -33,7 +33,7 @@ cmd="${cmd} -l ${l}"
 cmd="${cmd} -w ${w}"
 cmd="${cmd} -r ${r}"
 cmd="${cmd} -t ${t}"
-echo "${cmd} -p ${va} ${item} ${tr} > ${log_path}/$l.$w.$r.log"
+echo "${cmd} -p ${va} ${item} ${tr} > ${log_path}/$l.$w.$k.log"
 }
 
 
