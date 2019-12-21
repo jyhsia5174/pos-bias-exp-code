@@ -58,9 +58,9 @@ def collate_fn_for_dssm(batch):
     context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
     return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
 
-def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1):
+def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
-        return PositionDataset(path, data_prefix, rebuild_cache, max_dim)
+        return PositionDataset(path, data_prefix, rebuild_cache, max_dim, test_flag)
     if name == 'a9a':
         return A9ADataset(path, training)
     else:
@@ -191,11 +191,11 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
+    if model_name in ['dssm', 'bidssm', 'extdssm', 'xdfm', 'dfm', 'dcn']:
+        collate_fn = collate_fn_for_dssm  # output data: [context, item, pos]
+    else:
+        collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
     if flag == 'train':
-        if model_name in ['dssm', 'bidssm', 'extdssm', 'xdfm', 'dfm', 'dcn']:
-            collate_fn = collate_fn_for_dssm  # output data: [context, item, pos]
-        else:
-            collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
         train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
@@ -219,7 +219,7 @@ def main(dataset_name,
         item_num = valid_dataset.get_item_num()
         refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
         valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, collate_fn=collate_fn)
-        model = torch.load(model_path)
+        model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     else:
         raise ValueError('Flag should be "train"/"test"!')
