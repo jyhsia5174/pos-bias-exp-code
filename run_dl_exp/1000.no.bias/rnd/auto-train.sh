@@ -19,7 +19,7 @@ log_path="test_score"
 
 # others
 mn='dssm'
-device='cuda:1'
+device='cuda:0'
 
 task(){
 # Set up fixed parameter and train command
