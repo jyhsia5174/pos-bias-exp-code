@@ -18,7 +18,7 @@ ds_path='./'
 log_path="grid_logs"
 
 # others
-mn='dssm'
+mn='xdfm'
 device='cuda:0'
 
 task(){
