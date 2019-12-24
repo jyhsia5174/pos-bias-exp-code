@@ -84,7 +84,7 @@ def get_model(name, dataset, embed_dim):
     elif name == 'extdssm':
         return ExtDSSM(input_dims, 10)
     elif name == 'xdfm':
-        return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=32, mlp_dims=(16, 16), dropout=0.2, cross_layer_sizes=(16, 16), split_half=True)
+        return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     elif name == 'dfm':
         return DeepFactorizationMachineModel(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     elif name == 'dcn':
