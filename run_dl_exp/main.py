@@ -203,7 +203,7 @@ def main(dataset_name,
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), dataset_part])
+        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), dataset_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
