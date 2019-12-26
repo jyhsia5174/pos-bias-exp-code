@@ -30,7 +30,7 @@ for lr in 0.0001 0.001
 do
     for wd in 5e-6 1e-6 5e-7
     do
-        for k in 16 32 
+        for k in 64 #16 32 
         do
             cmd=${train_cmd}
             cmd="${cmd} --learning_rate ${lr}"
