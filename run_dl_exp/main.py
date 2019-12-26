@@ -221,8 +221,16 @@ def main(dataset_name,
         valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, collate_fn=collate_fn)
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
+    elif flag == 'test_auc':
+        train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, 'rnd_gt', False, train_dataset.get_max_dim() - 1)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
+        model = torch.load(model_path).to(device)
+        va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
+        print("model-%s, auc-%.4f, logloss-%.6f"%(model_name, va_auc, va_logloss))
+        #pred(model, valid_data_loader, device, model_name, item_num)
     else:
-        raise ValueError('Flag should be "train"/"test"!')
+        raise ValueError('Flag should be "train"/"test"/"test_auc"!')
 
 
 
