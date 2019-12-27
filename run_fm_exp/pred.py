@@ -16,7 +16,7 @@ Ps = sorted([os.path.join(root, i) for i in os.listdir(root) if i.startswith('Pv
 Qs = torch.tensor(np.vstack([np.expand_dims(np.load(i).T, axis=0) for i in Qs])).to(device)
 Ps = torch.tensor(np.vstack([np.expand_dims(np.load(i), axis=0) for i in Ps])).to(device)
 item_num = Qs.size()[-1]
-#print(Qs.size(), Ps.size())
+print(Qs.size(), Ps.size())
 
 rngs = [np.random.RandomState(seed) for seed in [0,3,4,5,6]]
 bids = np.empty((len(rngs), item_num)) 
