@@ -11,7 +11,6 @@ build/
 
 # tmp file
 *.pyc
-*.pyx
 *.tmp
 *.so
 
@@ -24,8 +23,12 @@ build/
 *.pred*
 *.prob*
 
-# data dir
+# data 
+data
 data/*
+Pva*
+Qva*
+*.lmdb
 
 # binary
 *.o
