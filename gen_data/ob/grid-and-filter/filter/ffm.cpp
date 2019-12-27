@@ -1502,9 +1502,9 @@ void ImpProblem::filter() {
         cnt++;
     }
 
-    free(idx_list_rd);
-    free(idx_list_pr);
-    free(idx_list_de);
+    delete[] idx_list_rd;
+    delete[] idx_list_pr;
+    delete[] idx_list_de;
 
     fclose(f_rd);
     fclose(f_pr);

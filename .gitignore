@@ -3,6 +3,9 @@
 *.csv
 *.swp
 *.label
+*.cvt
+*.bias
+*.gz
 __pycache__/
 build/
 
@@ -28,7 +31,12 @@ data/*
 *.o
 *.model
 train
+predict-and-filter
 
 # tags
 tags
 
+
+# trash
+
+trash

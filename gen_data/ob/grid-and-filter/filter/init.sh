@@ -9,6 +9,9 @@ elif [ "$machine_name" = "optima" ]; then
 elif [[ "$machine_name" =~ linux[0-9]* ]]; then
   echo "$machine_name"
   source /tmp2/b02701216/intel/mkl/bin/mklvars.sh intel64
+elif [[ "$machine_name" =~ "patty" ]]; then
+  echo "$machine_name"
+  source /home/johncreed/intel/mkl/bin/mklvars.sh intel64
 else
   echo "Not found"
 fi
