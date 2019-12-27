@@ -26,9 +26,9 @@ task(){
 train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --dataset_path ${ds_path} --flag ${flag} --model_name ${mn} --epoch ${epoch} --device ${device} --save_dir ${log_path} --batch_size ${batch_size}"
 
 # Print out all parameter pair
-for lr in 0.0001 0.001
+for lr in 0.001 #0.0001
 do
-    for wd in 5e-6 1e-6 5e-7
+    for wd in 5e-7 1e-6 #5e-6
     do
         for k in 16 32 
         do
