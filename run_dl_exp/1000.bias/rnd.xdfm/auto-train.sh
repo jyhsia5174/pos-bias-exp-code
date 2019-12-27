@@ -8,10 +8,12 @@ train='python ../../main.py'
 flag='train'
 epoch=30
 batch_size=8192
+k=32
 
 # Data set
 ds='pos'
 ds_part='trva'
+va_part='rnd_gt'
 ds_path='./'
 
 # Log path
@@ -23,10 +25,10 @@ device='cuda:1'
 
 task(){
 # Set up fixed parameter and train command
-train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --dataset_path ${ds_path} --flag ${flag} --model_name ${mn} --epoch ${epoch} --device ${device} --save_dir ${log_path}"
+train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --valid_part ${va_part} --dataset_path ${ds_path} --flag ${flag} --model_name ${mn} --epoch ${epoch} --device ${device} --save_dir ${log_path} --embed_dim ${k}"
 
 # Print out all parameter pair
-lr=0.0001
+lr=0.001
 wd=1e-6
 bs=8192 
 cmd=${train_cmd}

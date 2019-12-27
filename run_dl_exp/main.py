@@ -178,6 +178,7 @@ def pred(model, data_loader, device, model_name, item_num):
 
 def main(dataset_name,
          dataset_part,
+         valid_part,
          dataset_path,
          flag,
          model_name,
@@ -197,7 +198,7 @@ def main(dataset_name,
         collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
-        valid_dataset = get_dataset(dataset_name, dataset_path, 'va', False, train_dataset.get_max_dim() - 1)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
@@ -240,7 +241,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
-    parser.add_argument('--dataset_part', default='trva')
+    parser.add_argument('--dataset_part', default='tr')
+    parser.add_argument('--valid_part', default='va')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm trva.svm')
     parser.add_argument('--flag', default='train')
     parser.add_argument('--model_name', default='dssm')
@@ -255,6 +257,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args.dataset_name,
          args.dataset_part,
+         args.valid_part,
          args.dataset_path,
          args.flag,
          args.model_name,
