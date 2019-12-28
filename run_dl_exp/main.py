@@ -153,7 +153,7 @@ def pred(model, data_loader, device, model_name, item_num):
     rngs = [np.random.RandomState(seed) for seed in [0,3,4,5,6]]
     bids = np.empty((len(rngs), item_num)) 
     for i, rng in enumerate(rngs):
-        bids[i, :] = rng.gamma(20, 1/0.4, item_num)
+        bids[i, :] = rng.gamma(10, 0.4, item_num)
     bids = torch.tensor(bids).to(device)
 
     model.eval()
@@ -269,3 +269,4 @@ if __name__ == '__main__':
          args.weight_decay,
          args.device,
          args.save_dir)
+

@@ -1,14 +1,15 @@
-set -x
+#!/bin/sh
 
-python ../../main.py --dataset_path ./ --dataset_part trva --model_path test_score/dssm_lr-0.0001_l2-1e-06_bs-8192_trva.pt --model_name dssm --flag test --batch_size 105500
-python ../../cal_revenue.py tmp.pred.0 ./gt.svm
-python ../../cal_revenue.py tmp.pred.1 ./gt.svm
-python ../../cal_revenue.py tmp.pred.2 ./gt.svm
-python ../../cal_revenue.py tmp.pred.3 ./gt.svm
-python ../../cal_revenue.py tmp.pred.4 ./gt.svm
-mv tmp.pred.0 ./test_score/test.pred.0
-mv tmp.pred.1 ./test_score/test.pred.1
-mv tmp.pred.2 ./test_score/test.pred.2
-mv tmp.pred.3 ./test_score/test.pred.3
-mv tmp.pred.4 ./test_score/test.pred.4
+root='test_score'
+model_path=`find ${root} -name "*.pt"`
+model_name=`echo ${model_path} | cut -d'/' -f2 | cut -d'_' -f1`
+echo "model_name: ${model_name}, model_path: ${model_path}"
+
+set -x
+python ../../main.py --dataset_path ./ --dataset_part trva --model_path ${model_path} --model_name ${model_name} --flag test --batch_size 55500 --device cuda:0
+for i in 0 1 2 3 4
+do
+	python ../../cal_revenue.py tmp.pred.${i} ./gt.svm | tee -a ${root}/${i}.log
+	mv tmp.pred.${i} ./${root}/test.pred.${i}
+done
 
