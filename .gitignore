@@ -14,6 +14,7 @@ build/
 *.tmp
 *.so
 *.stats
+*.stat
 
 # model training 
 *.log

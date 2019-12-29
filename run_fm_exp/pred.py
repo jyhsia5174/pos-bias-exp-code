@@ -23,7 +23,7 @@ rngs = [np.random.RandomState(seed) for seed in [0,3,4,5,6]]
 bids = np.empty((len(rngs), item_num)) 
 for i, rng in enumerate(rngs):
     #bids[i, :] = rng.gamma(1.5, 10, item_num)
-    bids[i, :] = rng.gamma(10, 0.4, item_num)
+    bids[i, :] = rng.gamma(10, 3, item_num)
     #bids[i, :] = np.array([2**i for i in range(10)])
 bids = torch.tensor(bids).to(device)
 
