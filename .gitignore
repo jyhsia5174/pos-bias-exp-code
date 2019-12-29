@@ -13,6 +13,7 @@ build/
 *.pyc
 *.tmp
 *.so
+*.stats
 
 # model training 
 *.log
