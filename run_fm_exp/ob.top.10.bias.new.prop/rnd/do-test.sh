@@ -24,8 +24,8 @@ task(){
 train_cmd="${train} -wn ${wn} -k ${k} -c ${c} --ns"
 
 # Print out all parameter pair
-t=50
-l=16
+t=25
+l=64
 w=0
 r=-1
 cmd=${train_cmd}
