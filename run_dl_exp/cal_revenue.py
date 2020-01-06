@@ -19,9 +19,9 @@ with open(sys.argv[1], 'r') as preds, open(sys.argv[2], 'r') as gts:
         preds = list(zip(*preds))
         for i, ad in enumerate(preds[0]):
             if gt == ad:
-                if np.random.rand() < pos**(i+1):
-                    s += float(preds[2][i])
-                    stats[gt] += float(preds[2][i])
+                if np.random.rand() < 0.9**(i+1):
+                    s += float(preds[-1][i])
+                    stats[gt] += float(preds[-1][i])
                 #s += float(preds[1][i])*(0.9**(i+1))
 
 print(s)

@@ -247,10 +247,10 @@ if __name__ == '__main__':
     parser.add_argument('--flag', default='train')
     parser.add_argument('--model_name', default='dssm')
     parser.add_argument('--model_path', default='', help='the path of model file')
-    parser.add_argument('--epoch', type=int, default=30)
+    parser.add_argument('--epoch', type=float, default=30.)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--batch_size', type=int, default=8192)
-    parser.add_argument('--embed_dim', type=int, default=16)
+    parser.add_argument('--batch_size', type=float, default=8192.)
+    parser.add_argument('--embed_dim', type=float, default=16.)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
@@ -262,10 +262,10 @@ if __name__ == '__main__':
          args.flag,
          args.model_name,
          args.model_path,
-         args.epoch,
+         int(args.epoch),
          args.learning_rate,
-         args.batch_size,
-         args.embed_dim,
+         int(args.batch_size),
+         int(args.embed_dim),
          args.weight_decay,
          args.device,
          args.save_dir)
