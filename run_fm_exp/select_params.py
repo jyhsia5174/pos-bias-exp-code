@@ -31,7 +31,9 @@ for lp in log_paths:
                     records[lp][2] = auc
 
 if flag:
-    print(sorted(records.items(), key=lambda x: x[-1][-1], reverse=flag)[0])
+    params = sorted(records.items(), key=lambda x: x[-1][-1], reverse=flag)[0]
 else:
-    print(sorted(records.items(), key=lambda x: x[-1][-2], reverse=flag)[0])
+    params = sorted(records.items(), key=lambda x: x[-1][-2], reverse=flag)[0]
+
+print(params[0].split('/')[-1].split('.')[0], params[0].split('/')[-1].split('.')[2], int(params[1][0]), params[1][1], params[1][2],)
 

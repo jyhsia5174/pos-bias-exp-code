@@ -6,12 +6,11 @@ train='./hytrain'
 
 # Fixed parameter
 wn=1
-k=64
 c=8
 
 # Data setr
 tr='trva.ffm'
-va='gt.ffm'
+va='rnd_gt.ffm'
 item='item.ffm'
 
 # Log path
@@ -20,14 +19,14 @@ mkdir -p $log_path
 
 
 task(){
-# Set up fixed parameter and train command
-train_cmd="${train} -wn ${wn} -k ${k} -c ${c} --ns"
 
 # Print out all parameter pair
-t=50
-l=16
+t=`python ../../select_params.py logs auc | cut -d' ' -f3`
+l=`python ../../select_params.py logs auc | cut -d' ' -f1`
+k=`python ../../select_params.py logs auc | cut -d' ' -f2`
 w=0
 r=-1
+train_cmd="${train} -wn ${wn} -k ${k} -c ${c} --ns"
 cmd=${train_cmd}
 cmd="${cmd} -l ${l}"
 cmd="${cmd} -w ${w}"
@@ -45,4 +44,4 @@ wait
 
 # Run
 echo "Run"
-task | xargs -0 -d '\n' -P 3 -I {} sh -c {} &
+task | xargs -0 -d '\n' -P 3 -I {} sh -c {} & 

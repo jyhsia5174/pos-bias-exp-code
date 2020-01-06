@@ -44,4 +44,4 @@ wait
 
 # Run
 echo "Run"
-task | xargs -0 -d '\n' -P 3 -I {} sh -c {} & 
+task | xargs -0 -d '\n' -P 3 -I {} sh -c {} 

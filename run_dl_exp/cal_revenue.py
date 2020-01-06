@@ -2,6 +2,10 @@ import numpy as np
 import os, sys
 from collections import defaultdict as ddict
 np.random.seed(0)
+try:
+    pos = float(sys.argv[3])
+except:
+    pos = 0.9
 
 stats = ddict(int)
 with open(sys.argv[1], 'r') as preds, open(sys.argv[2], 'r') as gts:
@@ -15,7 +19,7 @@ with open(sys.argv[1], 'r') as preds, open(sys.argv[2], 'r') as gts:
         preds = list(zip(*preds))
         for i, ad in enumerate(preds[0]):
             if gt == ad:
-                if np.random.rand() < 0.5**(i+1):
+                if np.random.rand() < pos**(i+1):
                     s += float(preds[2][i])
                     stats[gt] += float(preds[2][i])
                 #s += float(preds[1][i])*(0.9**(i+1))

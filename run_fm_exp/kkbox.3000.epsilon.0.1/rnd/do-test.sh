@@ -21,9 +21,9 @@ mkdir -p $log_path
 task(){
 
 # Print out all parameter pair
-t=`python ../../select_params.py logs auc | cut -d' ' -f3`
-l=`python ../../select_params.py logs auc | cut -d' ' -f1`
-k=`python ../../select_params.py logs auc | cut -d' ' -f2`
+t=`python ../../select_params.py logs logloss | cut -d' ' -f3`
+l=`python ../../select_params.py logs logloss | cut -d' ' -f1`
+k=`python ../../select_params.py logs logloss | cut -d' ' -f2`
 w=0
 r=-1
 train_cmd="${train} -wn ${wn} -k ${k} -c ${c} --ns"
@@ -44,4 +44,4 @@ wait
 
 # Run
 echo "Run"
-task | xargs -0 -d '\n' -P 3 -I {} sh -c {} & 
+task | xargs -0 -d '\n' -P 3 -I {} sh -c {} 
