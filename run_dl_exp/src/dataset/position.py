@@ -29,6 +29,7 @@ class PositionDataset(Dataset):
         with self.env.begin(write=False) as txn:
             self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
             self.item_num = np.frombuffer(txn.get(b'item_num'), dtype=np.int32)[0]
+            print('Totally %d items, %d dims'%(self.item_num, self.max_dim))
             self.length = 10*(txn.stat()['entries'] - self.item_num - 2) if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 2)
     
     def __build_cache(self, data_path, item_path, cache_path):
