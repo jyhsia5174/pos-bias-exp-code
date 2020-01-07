@@ -103,7 +103,7 @@ from src.model.layer import CompressedInteractionNetwork, FeaturesEmbedding, Fea
 #        return self.fc(torch.sum(torch.cat(xs, dim=1), 2))
 
 
-class ExtremeDeepFactorizationMachineModel(torch.nn.Module):
+class BiExtremeDeepFactorizationMachineModel(torch.nn.Module):
     """
     A pytorch varietal implementation of xDeepFM, which only have 2 fields
 
@@ -111,19 +111,24 @@ class ExtremeDeepFactorizationMachineModel(torch.nn.Module):
         J Lian, et al. xDeepFM: Combining Explicit and Implicit Feature Interactions for Recommender Systems, 2018.
     """
 
-    def __init__(self, input_dims, embed_dim=32, mlp_dims=(16, 16), dropout=0.2, cross_layer_sizes=(16, 16), split_half=True):
+    def __init__(self, input_dims, pos_dim, embed_dim=32, mlp_dims=(16, 16), dropout=0.2, cross_layer_sizes=(16, 16), split_half=True):
         super().__init__()
         self.embedding = FeaturesEmbedding(input_dims, embed_dim)
+        self.embed2 = torch.nn.Embedding(pos_dim+1, 1, padding_idx=0)
         self.embed_output_dim = 2 * embed_dim  # only 2 fields: context and item
         self.cin = CompressedInteractionNetwork(2, cross_layer_sizes, split_half)
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout)
         self.linear = FeaturesLinear(input_dims)
 
-    def forward(self, x1, x2):
+        torch.nn.init.xavier_uniform_(self.embed2.weight.data[1:, :])
+
+    def forward(self, x1, x2, x3):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         embed_x = self.embedding(x1, x2)
         #print(embed_x.size())
         x = self.linear(x1, x2) + self.cin(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
-        return torch.sigmoid(x.squeeze(1))
+        x3 = torch.sum(self.embed2(x3), dim = 1)  # (batch_size,)
+        x3 = torch.sigmoid(x3).squeeze(1) 
+        return torch.sigmoid(x.squeeze(1)) * x3
