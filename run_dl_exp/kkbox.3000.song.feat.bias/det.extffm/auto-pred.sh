@@ -1,0 +1,1 @@
+../det/auto-pred.sh

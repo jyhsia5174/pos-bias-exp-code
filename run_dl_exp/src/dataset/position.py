@@ -69,8 +69,8 @@ class PositionDataset(Dataset):
                 line = line.strip()
                 labels, context = line.split(' ', 1)
                 labels = labels.strip().split(',')
+                value = [int(float(i.split(':')[1])*100000) for i in context.split(' ')]
                 context = [int(i.split(':')[0]) for i in context.split(' ')]
-                value = [int(float(i.split(':')[1])*1000) for i in context.split(' ')]
                 pairs = list()
                 for l in labels:   
                     try:
@@ -104,7 +104,7 @@ class PositionDataset(Dataset):
                 flag = np_array[pos*2 + 1]
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
                 data = np_array[20:].reshape(2, -1)[0, :]  # context
-                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/1000  # context
+                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
             pos += 1
         else:
             context_idx = int(idx)//self.item_num
@@ -115,7 +115,7 @@ class PositionDataset(Dataset):
                 flag = -1
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
                 data = np_array[20:].reshape(2, -1)[0, :]  # context
-                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/1000  # context
+                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
         if self.tr_max_dim > 0:
             data = data[data <= self.tr_max_dim]
         return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position

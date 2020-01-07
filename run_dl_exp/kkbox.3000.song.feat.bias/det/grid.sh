@@ -28,7 +28,7 @@ train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --dataset_pat
 # Print out all parameter pair
 for lr in 0.0001 0.001
 do
-    for wd in 1e-6 1e-6 1e-7
+    for wd in 2e-6 1e-6 5e-7
     do
         for k in 16 32 
         do

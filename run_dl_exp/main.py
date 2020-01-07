@@ -51,7 +51,7 @@ def collate_fn_for_lr(batch):
 
 def collate_fn_for_dssm(batch):
     context = [torch.LongTensor(i['context']) for i in batch]
-    value = [torch.LongTensor(i['value']) for i in batch]
+    value = [torch.FloatTensor(i['value']) for i in batch]
     item = [torch.LongTensor(i['item']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
@@ -62,7 +62,7 @@ def collate_fn_for_dssm(batch):
     item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
     context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
     value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
-    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), torch.FloatTensor(value)
+    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
