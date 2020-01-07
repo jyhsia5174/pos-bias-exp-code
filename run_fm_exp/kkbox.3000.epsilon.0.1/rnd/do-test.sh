@@ -6,7 +6,7 @@ train='./hytrain'
 
 # Fixed parameter
 wn=1
-c=8
+c=6
 
 # Data setr
 tr='trva.ffm'
