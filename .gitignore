@@ -4,7 +4,7 @@
 *.swp
 *.label
 *.cvt
-*.bias
+# *.bias
 *.gz
 __pycache__/
 build/
