@@ -68,8 +68,9 @@ class PositionDataset(Dataset):
             for line in pbar:
                 line = line.strip()
                 labels, context = line.split(' ', 1)
-                labels = labels.split(',')
+                labels = labels.strip().split(',')
                 context = [int(i.split(':')[0]) for i in context.split(' ')]
+                value = [int(float(i.split(':')[1])*1000) for i in context.split(' ')]
                 pairs = list()
                 for l in labels:   
                     try:
@@ -78,10 +79,11 @@ class PositionDataset(Dataset):
                         item_idx = l
                         flag = '1'
                     pairs.extend([int(item_idx), int(flag)])
-                feature = pairs + sorted(context)
+                feature = pairs + context + value
                 if  feature[-1] > max_dim:
                     max_dim = feature[-1]
                 feature = np.array(feature, dtype=np.int32)  # [label, item_idx, position, feature_idx]
+                value = np.array(value, dtype=np.float32)
                 buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim))
                 sample_idx += 1
                 if sample_idx % buffer_size == 0:
@@ -101,7 +103,8 @@ class PositionDataset(Dataset):
                 item_idx = np_array[pos*2]
                 flag = np_array[pos*2 + 1]
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np_array[20:]  # context
+                data = np_array[20:].reshape(2, -1)[0, :]  # context
+                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/1000  # context
             pos += 1
         else:
             context_idx = int(idx)//self.item_num
@@ -111,10 +114,11 @@ class PositionDataset(Dataset):
                 item_idx = int(idx)%self.item_num 
                 flag = -1
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np_array[2:]  # item + context
+                data = np_array[20:].reshape(2, -1)[0, :]  # context
+                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/1000  # context
         if self.tr_max_dim > 0:
             data = data[data <= self.tr_max_dim]
-        return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx}  # pos \in {1,2,...9,10}, 0 for no-position
+        return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
 
 
     def get_max_dim(self):

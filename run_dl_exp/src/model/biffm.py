@@ -12,8 +12,8 @@ class BiFFM(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.embed2.weight.data[1:, :])
 
 
-    def forward(self, x1, x2, x3):  # x1: context, x2: item, x3: position
-        x1 = torch.sum(self.embed1(x1), dim=1)  # field 1 embedding for cxt: (batch_size, cxt_nonzero_feature_num, embed_dim)
+    def forward(self, x1, x2, x3, x4):  # x1: context, x2: item, x3: position
+        x1 = torch.sum(self.embed1(x1)*x4.unsqueeze(1), dim=1)  # field 1 embedding for cxt: (batch_size, cxt_nonzero_feature_num, embed_dim)
         x2 = torch.sum(self.embed1(x2), dim=1)  # field 1 embedding for item: (batch_size, item_nonzero_feature_num, embed_dim)
 
         ## merge

@@ -51,6 +51,7 @@ def collate_fn_for_lr(batch):
 
 def collate_fn_for_dssm(batch):
     context = [torch.LongTensor(i['context']) for i in batch]
+    value = [torch.LongTensor(i['value']) for i in batch]
     item = [torch.LongTensor(i['item']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
@@ -60,7 +61,8 @@ def collate_fn_for_dssm(batch):
     #data_length = [len(sq) for sq in data]
     item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
     context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
+    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), torch.FloatTensor(value)
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
@@ -111,13 +113,16 @@ def model_helper(data_pack, model, model_name, device):
         data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
         y = model(data, pos)
     elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
-        context, item, target, pos = data_pack
+        context, item, target, pos, _ = data_pack
         context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
         y = model(context, item)
     elif model_name in ['bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
-        context, item, target, pos = data_pack
-        context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-        y = model(context, item, pos)
+        context, item, target, pos, value = data_pack
+        context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+        if 'ffm' in model_name:
+            y = model(context, item, pos, value)
+        else:
+            y = model(context, item, pos)
     else:
         data, target, pos = data_pack
         data, target = data.to(device, torch.long), target.to(device, torch.float)
