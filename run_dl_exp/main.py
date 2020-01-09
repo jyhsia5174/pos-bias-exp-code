@@ -16,7 +16,11 @@ from src.model.extlr import ExtLogisticRegression
 from src.model.dssm import DSSM
 from src.model.bidssm import BiDSSM
 from src.model.extdssm import ExtDSSM
+from src.model.biffm import BiFFM
+from src.model.extffm import ExtFFM
 from src.model.xdfm import ExtremeDeepFactorizationMachineModel
+from src.model.bixdfm import BiExtremeDeepFactorizationMachineModel
+from src.model.extxdfm import ExtExtremeDeepFactorizationMachineModel
 from src.model.dfm import DeepFactorizationMachineModel
 from src.model.dcn import DeepCrossNetworkModel
 from utility import recommend
@@ -47,6 +51,7 @@ def collate_fn_for_lr(batch):
 
 def collate_fn_for_dssm(batch):
     context = [torch.LongTensor(i['context']) for i in batch]
+    value = [torch.FloatTensor(i['value']) for i in batch]
     item = [torch.LongTensor(i['item']) for i in batch]
     label = [i['label'] for i in batch]
     pos = [i['pos'] for i in batch]
@@ -56,7 +61,8 @@ def collate_fn_for_dssm(batch):
     #data_length = [len(sq) for sq in data]
     item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
     context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
+    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
+    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
@@ -83,8 +89,16 @@ def get_model(name, dataset, embed_dim):
         return BiDSSM(input_dims, 10)
     elif name == 'extdssm':
         return ExtDSSM(input_dims, 10)
+    elif name == 'biffm':
+        return BiFFM(input_dims, 10, embed_dim)
+    elif name == 'extffm':
+        return ExtFFM(input_dims, 10, embed_dim)
     elif name == 'xdfm':
         return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
+    elif name == 'bixdfm':
+        return BiExtremeDeepFactorizationMachineModel(input_dims, 10, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
+    elif name == 'extxdfm':
+        return ExtExtremeDeepFactorizationMachineModel(input_dims, 10, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     elif name == 'dfm':
         return DeepFactorizationMachineModel(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     elif name == 'dcn':
@@ -99,13 +113,16 @@ def model_helper(data_pack, model, model_name, device):
         data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
         y = model(data, pos)
     elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
-        context, item, target, pos = data_pack
+        context, item, target, pos, _ = data_pack
         context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
         y = model(context, item)
-    elif model_name in ['bidssm', 'extdssm']:
-        context, item, target, pos = data_pack
-        context, item, target, pos = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-        y = model(context, item, pos)
+    elif model_name in ['bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
+        context, item, target, pos, value = data_pack
+        context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+        if 'ffm' in model_name:
+            y = model(context, item, pos, value)
+        else:
+            y = model(context, item, pos)
     else:
         data, target, pos = data_pack
         data, target = data.to(device, torch.long), target.to(device, torch.float)
@@ -192,7 +209,7 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name in ['dssm', 'bidssm', 'extdssm', 'xdfm', 'dfm', 'dcn']:
+    if model_name in ['dssm', 'bidssm', 'extdssm', 'biffm', 'extffm', 'xdfm', 'dfm', 'dcn', 'bixdfm', 'extxdfm']:
         collate_fn = collate_fn_for_dssm  # output data: [context, item, pos]
     else:
         collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 

@@ -20,7 +20,7 @@ log_path="test_score"
 
 # others
 mn='xdfm'
-device='cuda:0'
+device='cuda:1'
 
 task(){
 # Set up fixed parameter and train command

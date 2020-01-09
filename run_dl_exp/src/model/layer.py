@@ -26,7 +26,7 @@ class FeaturesEmbedding(torch.nn.Module):
         super().__init__()
         self.embedding = torch.nn.Embedding(input_dims, embed_dim, padding_idx=0)
         #self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
-        #torch.nn.init.xavier_uniform_(self.embedding.weight.data)
+        torch.nn.init.xavier_uniform_(self.embedding.weight.data[1:, :])
 
     def forward(self, x1, x2):
         """
@@ -133,11 +133,37 @@ class FactorizationMachine(torch.nn.Module):
         """
         :param x: Float tensor of size ``(batch_size, num_fields, embed_dim)``
         """
-        square_of_sum = torch.sum(x, dim=1) ** 2
-        sum_of_square = torch.sum(x ** 2, dim=1)
+        square_of_sum = torch.sum(x, dim=1) ** 2  # [batch_size, embed_dim]
+        sum_of_square = torch.sum(x ** 2, dim=1)  # []
         ix = square_of_sum - sum_of_square  # (batch_size, embed_dim)
         if self.reduce_sum:
             ix = torch.sum(ix, dim=1, keepdim=True)  # (batch_size)
         return 0.5 * ix
+
+
+class FieldAwareFactorizationMachine(torch.nn.Module):
+
+    def __init__(self, field_dims, embed_dim):
+        super().__init__()
+        self.num_fields = len(field_dims)
+        self.embeddings = torch.nn.ModuleList([
+            torch.nn.Embedding(sum(field_dims), embed_dim) for _ in range(self.num_fields)
+        ])
+        self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
+        for embedding in self.embeddings:
+            torch.nn.init.xavier_uniform_(embedding.weight.data)
+
+    def forward(self, x):
+        """
+        :param x: Long tensor of size ``(batch_size, num_fields)``
+        """
+        x = x + x.new_tensor(self.offsets).unsqueeze(0)
+        xs = [self.embeddings[i](x) for i in range(self.num_fields)]  # (num_fields, feature_num, embed_dim)
+        ix = list()
+        for i in range(self.num_fields - 1):
+            for j in range(i + 1, self.num_fields):
+                ix.append(xs[j][:, i] * xs[i][:, j])  # [filed jth, :, embed_dim ith] 
+        ix = torch.stack(ix, dim=1)
+        return ix
 
 
