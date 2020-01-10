@@ -1,21 +1,19 @@
 #!/bin/sh
 
 set -x
+mn='xdfm'
+cd kkbox.10.song.feat.ffm.pos.0.5.new/${3}
+./grid.sh ${2} ${mn}
+./auto-train.sh ${2} ${mn}
+./auto-pred.sh ${2}
+cd ../../
+
 for i in '.comb.' '.'
 do
-	for j in 0.01 0.1
-	do
-		cd kkbox.3000${i}epsilon.${j}/rnd
-		for k in 'trva' 'va' 'tr'
-		do
-			ln -sf ../../../data/mix/kkbox.3000${i}epsilon.${j}/select_${k}.svm ${k}.svm
-		done
-		ln -sf ../../../data/mix/kkbox.3000${i}epsilon.${j}/rnd_gt.svm ./
-		ln -sf ../../../data/mix/kkbox.3000${i}epsilon.${j}/truth.svm ./gt.svm
-		ln -sf ../../../data/mix/kkbox.3000${i}epsilon.${j}/item.svm ./
-		#./grid.sh 0 ${i}
-		#./auto-train.sh 0 ${i}
-		#./auto-pred.sh 0
-		cd ../../
-	done
+	cd kkbox.10.song.feat.ffm.pos.0.5.new${i}${1}/random
+	./grid.sh ${2} ${mn}
+	./auto-train.sh ${2} ${mn}
+	./auto-pred.sh ${2}
+	cd ../../
 done
+

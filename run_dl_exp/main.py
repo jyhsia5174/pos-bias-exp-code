@@ -113,9 +113,13 @@ def model_helper(data_pack, model, model_name, device):
         data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
         y = model(data, pos)
     elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
-        context, item, target, pos, _ = data_pack
-        context, item, target = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float)
-        y = model(context, item)
+        context, item, target, pos, value = data_pack
+        context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+        if 'xdfm' in model_name:
+            #print(context[0], item[0], value[0])
+            y = model(context, item, value)
+        else:
+            y = model(context, item)
     elif model_name in ['bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
         context, item, target, pos, value = data_pack
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
@@ -130,13 +134,13 @@ def model_helper(data_pack, model, model_name, device):
     return y, target
 
 
-def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=10):
+def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=1000):
     model.train()
     #handle = model.fc2.register_forward_hook(hook)
     #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
     #handle.remove()
     total_loss = 0
-    pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)
+    pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
     for i, tmp in enumerate(pbar):
         y, target = model_helper(tmp, model, model_name, device)
         loss = criterion(y, target.float())
@@ -157,7 +161,7 @@ def test(model, data_loader, device, model_name):
     #handle.remove()
     targets, predicts = list(), list()
     with torch.no_grad():
-        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
+        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device)
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
@@ -176,7 +180,7 @@ def pred(model, data_loader, device, model_name, item_num):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
-        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)):
+        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device)
             num_of_user = y.size()[0]//item_num
             #with open('dssm-unif.prob', 'a') as f:
