@@ -113,17 +113,27 @@ class ExtremeDeepFactorizationMachineModel(torch.nn.Module):
 
     def __init__(self, input_dims, embed_dim=32, mlp_dims=(16, 16), dropout=0.2, cross_layer_sizes=(16, 16), split_half=True):
         super().__init__()
-        self.embedding = FeaturesEmbedding(input_dims, embed_dim)
+        #self.embedding = FeaturesEmbedding(input_dims, embed_dim)
+        self.embedding = torch.nn.Embedding(input_dims, embed_dim, padding_idx=0)
+        torch.nn.init.xavier_uniform_(self.embedding.weight.data[1:, :])
+
         self.embed_output_dim = 2 * embed_dim  # only 2 fields: context and item
         self.cin = CompressedInteractionNetwork(2, cross_layer_sizes, split_half)
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout)
-        self.linear = FeaturesLinear(input_dims)
+        #self.linear = FeaturesLinear(input_dims)
+        self.fc = torch.nn.Embedding(input_dims, 1, padding_idx=0)
+        self.bias = torch.nn.Parameter(torch.zeros((1,)))
 
-    def forward(self, x1, x2):
+    def forward(self, x1, x2, x3):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
-        embed_x = self.embedding(x1, x2)
-        #print(embed_x.size())
-        x = self.linear(x1, x2) + self.cin(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
+        #embed_x = self.embedding(x1, x2) self.embed1(x1), x4.unsqueeze(2))
+        embed1 = torch.mul(self.embedding(x1), x3.unsqueeze(2)).mean(dim=1, keepdim=True)
+        embed2 = self.embedding(x2).mean(dim=1, keepdim=True)
+        embed_x = torch.cat((embed1, embed2), 1)
+        linear_x = torch.sum(torch.mul(self.fc(x1), x3.unsqueeze(2)), dim=1) + torch.sum(self.fc(x2), dim=1) + self.bias
+
+        x = linear_x + self.cin(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
+        
         return torch.sigmoid(x.squeeze(1))
