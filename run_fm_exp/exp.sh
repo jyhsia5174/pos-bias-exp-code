@@ -1,20 +1,22 @@
 #!/bin/bash
 
+set -x
 task(){
-for r in 0.1 0.2 0.5
+for r in 0.1 #0.2 0.5
 do 
 	for j in '.comb.' '.' 
 	do 
 		for i in 0.1 0.01 
 		do 
-			cd ../data/mix/kkbox.3000${j}epsilon.${i}
-			sh ./data.sh ../../kkbox.3000.song.feat.bias $i $r
-			cd ../../../run_fm_exp
-			cd kkbox.3000${j}epsilon.${i}/rnd
-			./grid.sh 
+			#cd ../data/mix/kkbox.3000${j}epsilon.${i}
+			#sh ./data.sh ../../kkbox.3000.song.feat.bias $i $r
+			#cd ../../../run_fm_exp
+			cd kkbox.10.song.feat.ffm.pos.0.5.new${j}${i}/random
+			#./grid.sh 
 			./do-test.sh
-			mv logs logs.${r}
-			mv test-score test-score.${r}.ll
+			./auto-pred.sh
+			#mv logs logs.${r}
+			#mv test-score test-score.${r}.ll
 			cd ../../
 
 			#cmd="cd kkbox.3000${j}epsilon.${i}/rnd;"
@@ -34,6 +36,14 @@ do
 			#echo "${cmd} cd ../../"
 		done; 
 	done;
+	for j in 'det' 'random'
+	do
+		cd kkbox.10.song.feat.ffm.pos.0.5.new/${j}
+		#./grid.sh 
+		./do-test.sh
+		./auto-pred.sh
+		cd ../../
+	done
 done
 }
 

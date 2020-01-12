@@ -7,20 +7,21 @@ from sklearn.metrics import roc_auc_score, log_loss
 
 root = sys.argv[1]
 gt_path = sys.argv[2]
+cp = int(sys.argv[3])
 device = 'cpu'
 batch_size_of_user = 500
 num_of_pos = 10
 res = np.empty(batch_size_of_user*num_of_pos, dtype=np.int32)
 
 Qs = sorted([os.path.join(root, i) for i in os.listdir(root) if i.startswith('Qva')])
-Ps = sorted([os.path.join(root, i) for i in os.listdir(root) if i.startswith('Pva')]) 
+Ps = sorted([os.path.join(root, i) for i in os.listdir(root) if i.startswith('Pva')])*cp
 #print(Qs, Ps)
 Qs = torch.tensor(np.vstack([np.expand_dims(np.load(i).T, axis=0) for i in Qs])).to(device)  # (n_fields,embed_dim,item_num) 
-Ps = torch.tensor(np.vstack([np.expand_dims(np.load(i), axis=0) for i in Ps])).to(device)  # (n_fields,context_num,embed_dim)
+Ps = torch.tensor(np.hstack([np.expand_dims(np.load(i), axis=0) for i in Ps])).to(device)  # (n_fields,context_num,embed_dim)
 item_num = Qs.size()[-1]
 embed_dim = Qs.size()[-2]
 print(item_num, embed_dim)
-#print(Qs.size(), Ps.size())
+print(Qs.size(), Ps.size())
 
 label_idxes, flags = list(), list()
 with open(gt_path, 'r') as gt:

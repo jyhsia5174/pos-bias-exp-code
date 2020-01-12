@@ -1,0 +1,1 @@
+../det/do-test.sh

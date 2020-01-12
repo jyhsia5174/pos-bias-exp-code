@@ -3,10 +3,7 @@ import os, sys
 import pickle
 from collections import defaultdict as ddict
 np.random.seed(0)
-try:
-    pos = float(sys.argv[3])
-except:
-    pos = 0.9
+pos = float(sys.argv[3])
 
 stats = ddict(int)
 with open(sys.argv[1], 'r') as preds, open(sys.argv[2], 'r') as gts:
