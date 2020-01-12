@@ -114,8 +114,8 @@ class PositionDataset(Dataset):
                 item_idx = int(idx)%self.item_num 
                 flag = -1
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np_array[20:].reshape(2, -1)[0, :]  # context
-                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
+                data = np_array[2:].reshape(2, -1)[0, :]  # context
+                value = np_array[2:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
         if self.tr_max_dim > 0:
             data = data[data <= self.tr_max_dim]
         return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position

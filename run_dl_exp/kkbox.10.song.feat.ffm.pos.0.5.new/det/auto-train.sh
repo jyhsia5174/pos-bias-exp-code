@@ -4,10 +4,13 @@
 # Train file path
 train='python ../../main.py'
 
+# params selection
+mode='auc'
+
 # Fixed parameter
 flag='train'
-epoch=`python ../../select_params.py grid_logs logloss | cut -d' ' -f5`
-k=`python ../../select_params.py grid_logs logloss | cut -d' ' -f4`
+epoch=`python ../../select_params.py grid_logs ${mode} | cut -d' ' -f5`
+k=`python ../../select_params.py grid_logs ${mode} | cut -d' ' -f4`
 
 # Data set
 ds='pos'
@@ -27,9 +30,9 @@ task(){
 train_cmd="${train} --dataset_name ${ds} --dataset_part ${ds_part} --valid_part ${va_part} --dataset_path ${ds_path} --flag ${flag} --model_name ${mn} --epoch ${epoch} --device ${device} --save_dir ${log_path} --embed_dim ${k}"
 
 # Print out all parameter pair
-lr=`python ../../select_params.py grid_logs logloss | cut -d' ' -f1`
-wd=`python ../../select_params.py grid_logs logloss | cut -d' ' -f2`
-bs=`python ../../select_params.py grid_logs logloss | cut -d' ' -f3` 
+lr=`python ../../select_params.py grid_logs ${mode} | cut -d' ' -f1`
+wd=`python ../../select_params.py grid_logs ${mode} | cut -d' ' -f2`
+bs=`python ../../select_params.py grid_logs ${mode} | cut -d' ' -f3` 
 cmd=${train_cmd}
 cmd="${cmd} --learning_rate ${lr}"
 cmd="${cmd} --weight_decay ${wd}"

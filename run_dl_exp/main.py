@@ -84,7 +84,7 @@ def get_model(name, dataset, embed_dim):
     elif name == 'extlr':
         return ExtLogisticRegression(input_dims, 10)
     elif name == 'dssm':
-        return DSSM(input_dims)
+        return DSSM(input_dims, embed_dim)
     elif name == 'bidssm':
         return BiDSSM(input_dims, 10)
     elif name == 'extdssm':
@@ -115,8 +115,7 @@ def model_helper(data_pack, model, model_name, device):
     elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
         context, item, target, pos, value = data_pack
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
-        if 'xdfm' in model_name:
-            #print(context[0], item[0], value[0])
+        if model_name in ['xdfm', 'dssm']:
             y = model(context, item, value)
         else:
             y = model(context, item)
@@ -163,6 +162,7 @@ def test(model, data_loader, device, model_name):
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device)
+            num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
@@ -180,6 +180,9 @@ def pred(model, data_loader, device, model_name, item_num):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
+        fs = list()
+        for j in range(len(rngs)):
+            fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device)
             num_of_user = y.size()[0]//item_num
@@ -188,13 +191,14 @@ def pred(model, data_loader, device, model_name, item_num):
             #    for j in range(num_of_user):
             #        f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
             for j in range(len(rngs)):
-                with open('tmp.pred.%d'%j, 'a') as fp:
-                    out = y*(bids[j, :].repeat(num_of_user))
-                    recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, item_num, num_of_pos, res[:num_of_user*num_of_pos])
-                    _res = res[:num_of_user*num_of_pos].reshape(num_of_user, num_of_pos)
-                    for r in range(num_of_user):
-                        tmp = ['%d:%.4f'%(ad, bids[j, ad]) for ad in _res[r, :]]
-                        fp.write('%s\n'%(' '.join(tmp)))
+                fp = fs[j]
+                out = y*(bids[j, :].repeat(num_of_user))
+                recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, item_num, num_of_pos, res[:num_of_user*num_of_pos])
+                _res = res[:num_of_user*num_of_pos].reshape(num_of_user, num_of_pos)
+                for r in range(num_of_user):
+                    tmp = ['%d:%.4f:%0.4f'%(ad, y[r*item_num+ad], bids[j, ad]) for ad in _res[r, :]]
+                    #tmp = ['%d:%.4f'%(ad, bids[j, ad]) for ad in _res[r, :]]
+                    fp.write('%s\n'%(' '.join(tmp)))
 
 
 def main(dataset_name,
