@@ -1,22 +1,28 @@
 #!/bin/bash
 
-set -x
+mode=${1}
+#set -x
 task(){
 for r in 0.1 #0.2 0.5
 do 
 	for j in '.comb.' '.' 
 	do 
-		for i in 0.1 0.01 
+		for i in 0.01 0.1 
 		do 
 			#cd ../data/mix/kkbox.3000${j}epsilon.${i}
 			#sh ./data.sh ../../kkbox.3000.song.feat.bias $i $r
 			#cd ../../../run_fm_exp
 			cd kkbox.10.song.feat.ffm.pos.0.5.new${j}${i}/random
+			echo ${j}${i}
 			#./grid.sh 
-			./do-test.sh
+			#rm -r test-score*
+			mv test-score test-score.${r}.ll
+			./do-test.sh ${mode}
 			./auto-pred.sh
+			python ../../select_params.py logs ${mode} 
+			tail -n2 test-score/*.*.log
+			cat test-score/[0-4].log | awk '{sum+=$1} END {print "Average = ", sum/NR}'
 			#mv logs logs.${r}
-			#mv test-score test-score.${r}.ll
 			cd ../../
 
 			#cmd="cd kkbox.3000${j}epsilon.${i}/rnd;"
@@ -39,9 +45,15 @@ do
 	for j in 'det' 'random'
 	do
 		cd kkbox.10.song.feat.ffm.pos.0.5.new/${j}
+		echo ${j}
 		#./grid.sh 
-		./do-test.sh
+		mv test-score test-score.ll
+		#rm -r test-score*
+		./do-test.sh ${mode} 
 		./auto-pred.sh
+		python ../../select_params.py logs ${mode} 
+		tail -n2 test-score/*.*.log
+		cat test-score/[0-4].log | awk '{sum+=$1} END {print "Average = ", sum/NR}'
 		cd ../../
 	done
 done
