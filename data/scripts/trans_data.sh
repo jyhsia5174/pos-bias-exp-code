@@ -15,7 +15,7 @@ ln -sf ${root}/truth.* ./
 ln -sf ${root}/item.* ./
 
 num_trva=`wc -l random.ffm | cut -d' ' -f1`
-num_te=`wc -l truth.ffm | cut -d' ' -f1`
+num_te=`wc -l truth.svm | cut -d' ' -f1`
 num_tr=$((${num_trva} - ${num_te}))
 num_item=`wc -l item.ffm | cut -d' ' -f1`
 
@@ -36,15 +36,16 @@ do
 	ln -sf det_tr.${i} det_trva.${i}
 	ln -sf random_tr.${i} random_trva.${i}
 	ln -sf random_va.${i} det_va.${i}
-	#for c in `seq 1 10`
-	#do
-	#	cat truth.${i} > truth.10.${i}
-	#done
-	python gen_rnd_gt.py truth.${i} rnd_gt.${i} ${num_item} '.' ${pos_bias}
-	#for j in '.' '.const.' '.pos.'
-	#do
-	#	python gen_rnd_gt.py truth.10.${i} rnd_gt.10${j}${i} ${num_item} ${j} ${pos_bias}
-	#done
+	for c in `seq 1 10`
+	do
+		cat truth.${i} >> truth.10.${i}
+	done
+	for j in '.' '.const.' '.pos.'
+	do
+		python gen_rnd_gt.py truth.${i} rnd_gt${j}${i} ${num_item} ${j} ${pos_bias} &
+		python gen_rnd_gt.py truth.10.${i} rnd_gt.10${j}${i} ${num_item} ${j} ${pos_bias} &
+	done
+	wait
 done
 python chg_form.py truth.ffm truth
 mv truth_trva.ffm gt.ffm

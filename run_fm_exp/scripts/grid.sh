@@ -5,7 +5,7 @@
 train='./hytrain'
 
 # Fixed parameter
-t=60
+t=50
 wn=1
 r=-1
 c=8

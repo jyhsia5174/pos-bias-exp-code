@@ -25,16 +25,16 @@ with open(fin_path, 'r') as fin, open(fout_path, 'w') as fout:
             if c == label:
                 if mode == '.':
                     tmp.append(c+':1')
-                #elif mode == '.const.':
-                #    if rnd <= portion:
-                #        tmp.append(c+':1')
-                #    else:
-                #        tmp.append(c+':0')
-                #elif mode == '.pos.':
-                #    if rnd <= pos**i:
-                #        tmp.append(c+':1')
-                #    else:
-                #        tmp.append(c+':0')
+                elif mode == '.const.':
+                    if rnd <= portion:
+                        tmp.append(c+':1')
+                    else:
+                        tmp.append(c+':0')
+                elif mode == '.pos.':
+                    if rnd <= pos**i:
+                        tmp.append(c+':1')
+                    else:
+                        tmp.append(c+':0')
                 else:
                     raise
             else:
