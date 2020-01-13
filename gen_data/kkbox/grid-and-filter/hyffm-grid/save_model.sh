@@ -1,8 +1,13 @@
 #!/bin/bash
 
-l=4
-t=2
-r=-6
-w=0.0009765625
+source init.sh
 
-./train -k 8 -l $l -t $t -r $r -w $w -wn 1  -c 5 -o rd.ffm.cvt.$l.$r.$w.1.ffm-ffm.model item.ffm rd.trva.ffm.cvt & 
+l=16
+r=-2
+w=0.25
+
+t=16
+
+./train -k 8 -l $l -t $t -r $r -w $w -wn 1  -c 5 -o filter.model item.ffm rd.trva.ffm & 
+
+echo "./train -k 8 -l $l -t $t -r $r -w $w -wn 1  -c 5 -o filter.model item.ffm rd.trva.ffm" > filter.model.param

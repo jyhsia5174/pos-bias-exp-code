@@ -6,6 +6,7 @@
 *.cvt
 # *.bias
 *.gz
+*ffm*bias
 __pycache__/
 build/
 
@@ -17,6 +18,10 @@ build/
 *.stat
 *.swn
 *.swo
+*.swm
+*.param
+*.ipynb*
+
 
 # model training 
 *.log
