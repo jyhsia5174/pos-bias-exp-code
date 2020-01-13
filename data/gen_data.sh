@@ -4,6 +4,11 @@ root=`pwd`
 data_path=${1}
 pos_bias=0.5
 
+if [ -z "$1" ]; then
+	echo "Plz input data_path!!!!!"
+	exit 0
+fi
+
 set -x
 # original data
 cd ${data_path}

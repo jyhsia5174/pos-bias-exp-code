@@ -2,6 +2,12 @@
 
 data_path=$1
 mode=$2
+
+if [ -z "$1" ] && [ -z "$2" ]; then
+	echo "Plz input data_path & mode!!!!!"
+	exit 0
+fi
+
 root=`pwd`
 pos_bias=0.5
 
@@ -14,9 +20,9 @@ run_exp(){
 	cmd="${cmd}; ./grid.sh" 
 	cmd="${cmd}; ./do-test.sh ${mode}"
 	#cmd="${cmd}; ./auto-pred.sh"
-	cmd="${cmd}; echo 'va_logloss va_auc' > record"
-	cmd="${cmd}; python select_params.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> record"
-	cmd="${cmd}; python cal_auc.py test-score.${mode}/  rnd_gt.ffm ${pos_bias} >> record"
+	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
+	cmd="${cmd}; python select_params.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> ${mode}.record"
+	cmd="${cmd}; python cal_auc.py test-score.${mode}/  rnd_gt.ffm ${pos_bias} >> ${mode}.record"
 	#cmd="${cmd}; tail -n2 test-score.${mode}/*.log | rev | cut -d' ' -f1 | rev"
 	#cmd="${cmd}; cat test-score/[0-4].log | awk '{sum+=\$1} END {print \"Average = \", sum/NR}'"
 	cmd="${cmd}; cd ${rdir}"
