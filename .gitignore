@@ -28,8 +28,9 @@ build/
 *.prob*
 
 # data 
-data
-data/*
+#data
+#data/*
+kkbox.*
 Pva*
 Qva*
 *.lmdb
