@@ -1,69 +1,71 @@
 #!/bin/bash
 
-mode=${1}
-#set -x
-task(){
-for r in 0.1 #0.2 0.5
-do 
-	for j in '.comb.' '.' 
-	do 
-		for i in 0.01 0.1 
-		do 
-			#cd ../data/mix/kkbox.3000${j}epsilon.${i}
-			#sh ./data.sh ../../kkbox.3000.song.feat.bias $i $r
-			#cd ../../../run_fm_exp
-			cd kkbox.10.song.feat.ffm.pos.0.5.new${j}${i}/random
-			echo ${j}${i}
-			#./grid.sh 
-			#rm -r test-score*
-			mv test-score test-score.${r}.ll
-			./do-test.sh ${mode}
-			./auto-pred.sh
-			python ../../select_params.py logs ${mode} 
-			tail -n2 test-score/*.*.log
-			cat test-score/[0-4].log | awk '{sum+=$1} END {print "Average = ", sum/NR}'
-			#mv logs logs.${r}
-			cd ../../
+data_path=$1
+mode=$2
+root=`pwd`
+pos_bias=0.5
 
-			#cmd="cd kkbox.3000${j}epsilon.${i}/rnd;"
-			#cmd="${cmd} mv logs.${r} logs;"
-			#cmd="${cmd} mv test-score.${r} test-score.${r}.auc;"
-			#cmd="${cmd} ./do-test.sh;"
-			#cmd="${cmd} mv logs logs.${r};"
-			#cmd="${cmd} mv test-score test-score.${r}.ll;"
-			#echo "${cmd} cd ../../"
-
-			#cmd="cd kkbox.3000${j}epsilon.${i}/rnd;"
-			#cmd="${cmd} mv logs.${r} logs;"
-			#cmd="${cmd} ./do-test.sh;"
-			#cmd="${cmd} mv logs logs.${r};"
-			#cmd="${cmd} ./auto-pred.sh;"
-			#cmd="${cmd} mv Pva* Qva* test-score/;"
-			#echo "${cmd} cd ../../"
-		done; 
-	done;
-	for j in 'det' 'random'
-	do
-		cd kkbox.10.song.feat.ffm.pos.0.5.new/${j}
-		echo ${j}
-		#./grid.sh 
-		mv test-score test-score.ll
-		#rm -r test-score*
-		./do-test.sh ${mode} 
-		./auto-pred.sh
-		python ../../select_params.py logs ${mode} 
-		tail -n2 test-score/*.*.log
-		cat test-score/[0-4].log | awk '{sum+=$1} END {print "Average = ", sum/NR}'
-		cd ../../
-	done
-done
+run_exp(){
+	cdir=$1
+	rdir=$2
+	mode=$3
+	cmd="cd ${cdir}"
+	#cmd="${cmd}; echo ${cdir}"
+	cmd="${cmd}; ./grid.sh" 
+	cmd="${cmd}; ./do-test.sh ${mode}"
+	#cmd="${cmd}; ./auto-pred.sh"
+	cmd="${cmd}; echo 'va_logloss va_auc' > record"
+	cmd="${cmd}; python select_params.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> record"
+	cmd="${cmd}; python cal_auc.py test-score.${mode}/  rnd_gt.ffm ${pos_bias} >> record"
+	#cmd="${cmd}; tail -n2 test-score.${mode}/*.log | rev | cut -d' ' -f1 | rev"
+	#cmd="${cmd}; cat test-score/[0-4].log | awk '{sum+=\$1} END {print \"Average = \", sum/NR}'"
+	cmd="${cmd}; cd ${rdir}"
+	echo ${cmd}
 }
 
+set -e
+exp_dir=`basename ${data_path}`
+for i in 'det' 'random'
+do
+	cdir=${exp_dir}/derive.${i}
+	mkdir -p ${cdir}
+	ln -sf ${root}/scripts/*.sh ${cdir}
+	ln -sf ${root}/scripts/*.py ${cdir}
+	ln -sf ${root}/hybrid-ocffm/train ${cdir}/hytrain
+	ln -sf ${root}/${data_path}/derive/*gt*ffm ${cdir}
+	ln -sf ${root}/${data_path}/derive/item.ffm ${cdir}
+	for j in 'trva' 'tr' 'va'
+	do
+		ln -sf ${root}/${data_path}/derive/${i}_${j}.ffm ${cdir}/${j}.ffm
+	done
+	run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+done
 
-# Check command
-echo "Check command list (the command may not be runned!!)"
-task
-wait
+for i in '.comb.' '.'
+do 
+	for k in 0.01 0.1
+	do 
+		cdir=${exp_dir}/der${i}${k}
+		mkdir -p ${cdir}
+		ln -sf ${root}/scripts/*.sh ${cdir}
+		ln -sf ${root}/scripts/*.py ${cdir}
+		ln -sf ${root}/hybrid-ocffm/train ${cdir}/hytrain
+		ln -sf ${root}/${data_path}/der${i}${k}/*gt*ffm ${cdir}
+		ln -sf ${root}/${data_path}/der${i}${k}/item.ffm ${cdir}
+		for j in 'trva' 'tr' 'va'
+		do
+			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.ffm ${cdir}/${j}.ffm
+		done
+		run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+	done
+done
+exit 0
+
+
+## Check command
+#echo "Check command list (the command may not be runned!!)"
+#task
+#wait
 
 
 # Run
