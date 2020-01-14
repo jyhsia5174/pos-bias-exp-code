@@ -39,8 +39,8 @@ task
 wait
 
 # Run
-#echo "Run"
-#task | xargs -0 -d '\n' -P 3 -I {} sh -c {} 
+echo "Run"
+task | xargs -0 -d '\n' -P 3 -I {} sh -c {} 
 
 
 #for i in 0 1 2 3 4

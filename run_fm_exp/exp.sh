@@ -2,14 +2,14 @@
 
 data_path=$1
 mode=$2
+pos_bias=$3
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-	echo "Plz input data_path & mode!!!!!"
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+	echo "Plz input data_path & mode & pos_bias!!!!!"
 	exit 0
 fi
 
 root=`pwd`
-pos_bias=0.5
 
 run_exp(){
 	cdir=$1

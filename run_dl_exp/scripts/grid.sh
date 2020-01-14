@@ -36,11 +36,11 @@ cmd="${cmd} --save_dir ${log_path}"
 cmd="${cmd} --batch_size ${bs}"
 
 # Print out all parameter pair
-for lr in 0.0001 #0.001
+for lr in 0.0001 0.001
 do
-    for wd in 1e-2 #1e-4 1e-6 
+    for wd in 1e-2 1e-4 1e-6 
     do
-        for k in 16 #32 64 
+        for k in 16 32 64 
         do
             cmd="${cmd} --learning_rate ${lr}"
             cmd="${cmd} --weight_decay ${wd}"

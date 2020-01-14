@@ -51,5 +51,5 @@ task
 
 
 # Run
-#echo "Run"
-#task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
+echo "Run"
+task | xargs -0 -d '\n' -P 1 -I {} sh -c {}

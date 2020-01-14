@@ -24,7 +24,7 @@ run_exp(){
 	cmd="${cmd}; ./do-pred.sh ${gpu} ${mode}"
 	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
 	cmd="${cmd}; python select_params.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> ${mode}.record" # va logloss, auc
-	cmd="${cmd}; head -n10 test-score.${mode}>> ${mode}.record" # va logloss, auc
+	cmd="${cmd}; head -n10 test-score.${mode}/rnd*log >> ${mode}.record" # va logloss, auc
 	#cmd="${cmd}; python cal_auc.py test-score.${mode}/  rnd_gt.svm ${pos_bias} >> ${mode}.record"
 	cmd="${cmd}; cd ${rdir}"
 	echo ${cmd}
@@ -45,7 +45,7 @@ do
 	do
 		ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
 	done
-	run_exp ${cdir} ${root} ${mode} #| xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+	run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 done
 
 for i in '.comb.' '.'
@@ -63,7 +63,7 @@ do
 		do
 			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.svm ${cdir}/${j}.svm
 		done
-		run_exp ${cdir} ${root} ${mode} #| xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+		run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
 exit 0
