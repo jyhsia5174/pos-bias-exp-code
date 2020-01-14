@@ -2,10 +2,10 @@
 
 root=`pwd`
 data_path=${1}
-pos_bias=0.5
+pos_bias=$2
 
-if [ -z "$1" ]; then
-	echo "Plz input data_path!!!!!"
+if [ -z "$1" ] || [ -z "$2" ]; then
+	echo "Plz input data_path & pos_bias!!!!!"
 	exit 0
 fi
 

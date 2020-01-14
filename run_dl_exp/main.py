@@ -202,7 +202,7 @@ def pred(model, data_loader, device, model_name, item_num):
 
 
 def main(dataset_name,
-         dataset_part,
+         train_part,
          valid_part,
          dataset_path,
          flag,
@@ -222,14 +222,14 @@ def main(dataset_name,
     else:
         collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
     if flag == 'train':
-        train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
+        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), dataset_part])
+        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
@@ -240,21 +240,22 @@ def main(dataset_name,
                 #log.write('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
     elif flag == 'test':
-        train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
-        valid_dataset = get_dataset(dataset_name, dataset_path, 'gt', False, train_dataset.get_max_dim() - 1, True)
+        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)
         item_num = valid_dataset.get_item_num()
         refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
         valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, collate_fn=collate_fn)
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     elif flag == 'test_auc':
-        train_dataset = get_dataset(dataset_name, dataset_path, dataset_part, False)
-        valid_dataset = get_dataset(dataset_name, dataset_path, 'rnd_gt', False, train_dataset.get_max_dim() - 1)
+        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
-        print(device)
+        #print(device)
         model = torch.load(model_path, map_location=device)
         va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
-        print("model-%s, auc-%.4f, logloss-%.6f"%(model_name, va_auc, va_logloss))
+        print("model logloss auc")
+        print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
         #pred(model, valid_data_loader, device, model_name, item_num)
     else:
         raise ValueError('Flag should be "train"/"test"/"test_auc"!')
@@ -266,7 +267,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='pos')
-    parser.add_argument('--dataset_part', default='tr')
+    parser.add_argument('--train_part', default='tr')
     parser.add_argument('--valid_part', default='va')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm trva.svm')
     parser.add_argument('--flag', default='train')
@@ -281,7 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_dir', default='logs')
     args = parser.parse_args()
     main(args.dataset_name,
-         args.dataset_part,
+         args.train_part,
          args.valid_part,
          args.dataset_path,
          args.flag,
