@@ -8,7 +8,7 @@ for i in 'det' 'random'
 do
 	for j in 'ffm' 'svm'
 	do
-		ln -sf ${root}/${i}.${j}.pos.0.5.bias ${i}.${j}
+		ln -sf ${root}/${i}.${j}.pos.${pos_bias}.bias ${i}.${j}
 	done
 done
 ln -sf ${root}/truth.* ./
