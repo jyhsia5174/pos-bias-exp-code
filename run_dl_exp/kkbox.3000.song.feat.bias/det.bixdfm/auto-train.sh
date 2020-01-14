@@ -1,1 +1,0 @@
-../det/auto-train.sh

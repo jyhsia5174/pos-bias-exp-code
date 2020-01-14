@@ -3,7 +3,7 @@
 data_path=$1
 mode=$2
 
-if [ -z "$1" ] && [ -z "$2" ]; then
+if [ -z "$1" ] || [ -z "$2" ]; then
 	echo "Plz input data_path & mode!!!!!"
 	exit 0
 fi

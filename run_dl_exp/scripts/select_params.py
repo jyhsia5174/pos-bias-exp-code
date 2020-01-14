@@ -1,7 +1,7 @@
 import os, sys
 
 root = sys.argv[1]
-flag = 1 if sys.argv[2] == 'auc' else 0
+mode = 1 if sys.argv[2] == 'auc' else 0
 log_paths = [os.path.join(root, f) for f in os.listdir(root) if f.endswith('log')]
 
 records = {}
