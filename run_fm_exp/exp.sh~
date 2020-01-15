@@ -31,6 +31,7 @@ if [ "${pass}" == "No" ]; then
 	exit 0
 fi
 echo "runing exps on the part-${part} of ${data_path} at mode-${mode} with pos_bias-${pos_bias}"
+exit 0
 
 root=`pwd`
 run_exp(){
