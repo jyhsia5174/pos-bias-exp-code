@@ -41,3 +41,17 @@ do
 	done
 done
 
+# generate imp data for 99%S_c + 1%S_t and 90%S_c + 10%S_t 
+for i in '.comb.' 
+do 
+	for j in 0.01 0.1
+	do 
+		cdir=${data_path}/der${i}${j}.imp
+		mkdir -p ${cdir} 
+		cd ${cdir}
+		ln -sf ${root}/scripts/mix_data_imp.sh ./
+		ln -sf ${root}/scripts/sc_st_split.py ./
+		./mix_data_imp.sh ../derive/ ${j} 
+		cd ${root}
+	done
+done

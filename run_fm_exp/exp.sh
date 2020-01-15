@@ -14,7 +14,7 @@ if [ -z "$4" ]; then
 	part='all'
 fi
 
-exp_parts="der.0.01,der.0.1,der.comb.0.01,der.comb.0.1,derive.det,derive.random,all"
+exp_parts="der.0.01,der.0.1,der.comb.0.01.imp,der.comb.0.1.imp,der.comb.0.01,der.comb.0.1,derive.det,derive.random,all"
 pass="No"
 Backup_of_internal_field_separator=$IFS
 IFS=,
@@ -51,6 +51,22 @@ run_exp(){
 	echo ${cmd}
 }
 
+run_exp_imp(){
+	cdir=$1
+	rdir=$2
+	mode=$3
+	cmd="cd ${cdir}"
+	cmd="${cmd}; ./grid.sh" 
+	#cmd="${cmd}; ./select_params.sh logs ${mode}"
+	cmd="${cmd}; ./do-test.sh ${mode}"
+	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
+	cmd="${cmd}; cat ${mode}.stats | rev | cut -d' ' -f1-2 | rev >> ${mode}.record"
+	#cmd="${cmd}; echo 'te_logloss te_auc' > ${mode}.record"
+	cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | cut -d' ' -f1-2 | rev >> ${mode}.record"
+	cmd="${cmd}; cd ${rdir}"
+	echo ${cmd}
+}
+
 set -e
 exp_dir=`basename ${data_path}`
 for i in 'det' 'random'
@@ -62,8 +78,10 @@ do
 	fi
 	cdir=${exp_dir}/derive.${i}
 	mkdir -p ${cdir}
-	ln -sf ${root}/scripts/*.sh ${cdir}
-	ln -sf ${root}/scripts/*.py ${cdir}
+	ln -sf ${root}/scripts/init.sh ${cdir}
+	ln -sf ${root}/scripts/grid.sh ${cdir}
+	ln -sf ${root}/scripts/do-test.sh ${cdir}
+	ln -sf ${root}/scripts/select_params.py ${cdir}
 	ln -sf ${root}/hybrid-ocffm/train ${cdir}/hytrain
 	ln -sf ${root}/${data_path}/derive/*gt*ffm ${cdir}
 	ln -sf ${root}/${data_path}/derive/item.ffm ${cdir}
@@ -85,8 +103,10 @@ do
 		fi
 		cdir=${exp_dir}/der${i}${k}
 		mkdir -p ${cdir}
-		ln -sf ${root}/scripts/*.sh ${cdir}
-		ln -sf ${root}/scripts/*.py ${cdir}
+		ln -sf ${root}/scripts/init.sh ${cdir}
+		ln -sf ${root}/scripts/grid.sh ${cdir}
+		ln -sf ${root}/scripts/do-test.sh ${cdir}
+		ln -sf ${root}/scripts/select_params.py ${cdir}
 		ln -sf ${root}/hybrid-ocffm/train ${cdir}/hytrain
 		ln -sf ${root}/${data_path}/der${i}${k}/*gt*ffm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}/item.ffm ${cdir}
@@ -97,8 +117,38 @@ do
 		run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
-exit 0
 
+for i in '.comb.' 
+do 
+	for k in 0.01 0.1
+	do 
+		if [ "${part}" != 'all' ]; then
+			if [ "${part}" != "der${i}${k}.imp" ]; then
+				continue
+			fi
+		fi
+		cdir=${exp_dir}/der${i}${k}.imp
+		mkdir -p ${cdir}
+		ln -sf ${root}/scripts/init.sh ${cdir}
+		ln -sf ${root}/scripts/grid-imp.sh ${cdir}/grid.sh
+		ln -sf ${root}/scripts/do-test-imp.sh ${cdir}/do-test.sh
+		ln -sf ${root}/scripts/select_params.sh ${cdir}
+		ln -sf ${root}/tfboys-complex/train ${cdir}/train
+		ln -sf ${root}/${data_path}/der${i}${k}.imp/*gt*ffm ${cdir}
+		ln -sf ${root}/${data_path}/der${i}${k}.imp/item.ffm ${cdir}
+		for j in 'trva' 'tr'
+		do
+			cat ${root}/${data_path}/der${i}${k}.imp/select_*_${j}.ffm > ${cdir}/${j}.ffm
+		done
+		for j in 'trva' 'tr'
+		do
+			ln -sf ${root}/${data_path}/der${i}${k}.imp/select_st_${j}.ffm ${cdir}/imp_${j}.ffm
+		done
+		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.ffm ${cdir}/va.ffm
+		run_exp_imp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+	done
+done
+exit 0
 
 ## Check command
 #echo "Check command list (the command may not be runned!!)"
