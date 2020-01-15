@@ -60,9 +60,9 @@ run_exp_imp(){
 	#cmd="${cmd}; ./select_params.sh logs ${mode}"
 	cmd="${cmd}; ./do-test.sh ${mode}"
 	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
-	cmd="${cmd}; cat ${mode}.stats | rev | cut -d' ' -f1-2 | rev >> ${mode}.record"
+	cmd="${cmd}; tail -n1 ${mode}.stats | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
 	#cmd="${cmd}; echo 'te_logloss te_auc' > ${mode}.record"
-	cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | cut -d' ' -f1-2 | rev >> ${mode}.record"
+	cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
 	cmd="${cmd}; cd ${rdir}"
 	echo ${cmd}
 }

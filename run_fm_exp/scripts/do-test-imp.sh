@@ -6,7 +6,7 @@ mode=$1
 l=`cat ${mode}.top | awk -F ':' '{print $1}' | rev | awk -F '/' '{print $1}'| rev | awk -F '_' '{print $1}'`
 w=`cat ${mode}.top | awk -F ':' '{print $1}' | rev | awk -F '/' '{print $1}'| rev | awk -F '_' '{print $2}'`
 d=`cat ${mode}.top | awk -F ':' '{print $1}' | rev | awk -F '/' '{print $1}'| rev | awk -F '_' '{print $3}'`
-t=`cat ${mode}.top | awk -F ':' '{print $1}' | awk -F ' ' '{print $1}'`
+t=`cat ${mode}.top | awk -F ':' '{print $2}' | awk -F ' ' '{print $1}'`
 c=24
 
 item='item.ffm'
