@@ -57,13 +57,11 @@ run_exp_imp(){
 	mode=$3
 	cmd="cd ${cdir}"
 	cmd="${cmd}; ./grid.sh" 
-	#cmd="${cmd}; ./select_params.sh logs ${mode}"
 	cmd="${cmd}; ./do-test.sh ${mode}"
-	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
-	cmd="${cmd}; tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
-	#cmd="${cmd}; echo 'te_logloss te_auc' > ${mode}.record"
-	cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
-	cmd="${cmd}; cd ${rdir}"
+	#cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
+	#cmd="${cmd}; tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
+	#cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
+	#cmd="${cmd}; cd ${rdir}"
 	echo ${cmd}
 }
 
@@ -144,8 +142,14 @@ do
 		do
 			ln -sf ${root}/${data_path}/der${i}${k}.imp/select_st_${j}.ffm ${cdir}/imp_${j}.ffm
 		done
+
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.ffm ${cdir}/va.ffm
 		run_exp_imp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+
+		echo 'va_logloss va_auc' > ${mode}.record; 
+		tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
+		tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
+		cd ${root}
 	done
 done
 exit 0
