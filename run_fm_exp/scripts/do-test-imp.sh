@@ -30,7 +30,7 @@ do
 		cmd="${cmd} -w $w"
 		cmd="${cmd} -d $d"
 		cmd="${cmd} -t ${t}"
-		cmd="${cmd} --imp-r"
+		cmd="${cmd} -imp-r 0"
 		cmd="${cmd} -c ${c}"
 		cmd="${cmd} --save-model"
 		cmd="${cmd} -p ./${te} ./${item} ./${tr} ./${imp} > ${logs_path}/${l}_${w}_${d}${i}${j}log"

@@ -1021,6 +1021,7 @@ void ImpProblem::input_whz(const shared_ptr<ImpData> &U1, Vec &iE_u, Vec &iH1, V
 }
 
 void ImpProblem::init_imp_r_whz(const Vec &imp_r){
+    print_vec(imp_r);
     iW.resize(m*d, 1.0 / sqrt(d) );
     iH.resize(n*d, 1.0 / sqrt(d) );
     iZ.resize(K*d, 0);
@@ -1063,6 +1064,27 @@ void ImpProblem::calc_imp_r(){
 
         if(imp_r[k] > 0 )
             imp_r[k] = logit(imp_r[k]);
+        else
+            imp_r[k] = -20;
+    }
+}
+
+void ImpProblem::calc_single_imp_r(){
+    imp_r.resize(P->m, 0);
+    fill(imp_r.begin(), imp_r.end(), 0);
+
+    ImpDouble nr_p = 0;
+#pragma omp parallel for schedule(dynamic), reduction(+:nr_p)
+    for(ImpLong k = 0; k < P->m; k++){
+        for(YNode* y = P->Y[k]; y < P->Y[k+1]; y++){
+            if(y->label == 1)
+                nr_p++;
+        }
+    }
+
+    for(ImpLong k = 0; k < P->m; k++){
+        if(nr_p > 0 )
+            imp_r[k] = logit(nr_p / (m*P->m));
         else
             imp_r[k] = -20;
     }

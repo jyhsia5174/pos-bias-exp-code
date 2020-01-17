@@ -9,7 +9,7 @@
 struct Option {
     shared_ptr<Parameter> param;
     string xc_path, xt_path, tr_path, te_path, imp_path;
-    bool do_imp_r = false;
+    ImpInt do_imp_r = -1;
     bool save_model = false;
 };
 
@@ -47,7 +47,10 @@ string train_help()
     "-w <omega>: set cost weight for the unobserves\n"
     "-c <threads>: set number of cores\n"
     "-d <rank>: set number of rank\n"
-    "--imp-r do imputation itemwise r\n"
+    "-imp-r do imputation (default -1)\n"
+    "\t -1 -- point-wise imputation \n"
+    "\t  0 -- global imputation \n"
+    "\t  1 -- position-wise imputation \n"
     "--save-model save embedding model"
     );
 }
@@ -127,9 +130,16 @@ Option parse_option(int argc, char **argv)
 
             option.te_path = string(args[i]);
         }
-        else if(args[i].compare("--imp-r") == 0)
+        else if(args[i].compare("-imp-r") == 0)
         {
-            option.do_imp_r = true;
+            if((i+1) >= argc)
+                throw invalid_argument("need to specify max number of\
+                                        iterations after -imp-r");
+            i++;
+
+            if(!is_numerical(argv[i]))
+                throw invalid_argument("-impr should be followed by a number");
+            option.do_imp_r= atoi(argv[i]);
         }
         else if(args[i].compare("--save-model") == 0)
         {
@@ -183,12 +193,17 @@ int main(int argc, char *argv[])
 
         ImpProblem imp_prob(Uimp, Utimp, Vimp, Pimp, option.param->lambda, 0,
                 option.param->d, option.param->nr_threads, option.param->nr_pass, solve_imp);
-        if( option.do_imp_r ){
-            imp_prob.calc_imp_r();
-        }
-        else{
-            imp_prob.init();
-            imp_prob.solve();
+
+        switch ( option.do_imp_r ){
+            case 0:
+                imp_prob.calc_single_imp_r();
+                break;
+            case 1:
+                imp_prob.calc_imp_r();
+                break;
+            default:
+                imp_prob.init();
+                imp_prob.solve();
         }
 
         solve_imp = false;
@@ -208,13 +223,14 @@ int main(int argc, char *argv[])
                 option.param->nr_threads, option.param->nr_pass, solve_imp);
        
 
-        if( option.do_imp_r ){
-            pre_prob.init_imp_r_whz(imp_prob.imp_r);
-        }
-        else{
-            shared_ptr<ImpData> Uemb = make_shared<ImpData>(option.tr_path, 0);
-            Uemb->read(true, Uimp->D);
-            pre_prob.input_whz(Uemb, imp_prob.E_u, imp_prob.H, imp_prob.Z);
+        switch (option.do_imp_r) {
+            case 0: case 1:
+                pre_prob.init_imp_r_whz(imp_prob.imp_r);
+                break;
+            default:
+                shared_ptr<ImpData> Uemb = make_shared<ImpData>(option.tr_path, 0);
+                Uemb->read(true, Uimp->D);
+                pre_prob.input_whz(Uemb, imp_prob.E_u, imp_prob.H, imp_prob.Z);
         }
 
 

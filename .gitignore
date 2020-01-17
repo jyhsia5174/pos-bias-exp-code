@@ -6,6 +6,7 @@
 *.cvt
 # *.bias
 *.gz
+tmp
 *ffm*bias
 __pycache__/
 build/

@@ -37,6 +37,10 @@ const int PIVOT_I = 0;
 const int PIVOT_J = 1;
 const int PIVOT_K = 2;
 
+const int POINT_R = -1;
+const int GLOBAL_R = 0;
+const int POS_R = 1;
+
 class Parameter {
 public:
     ImpFloat omega, lambda;
@@ -123,6 +127,7 @@ public:
     void input_whz(const shared_ptr<ImpData> &U1, Vec &iW1, Vec &iH1, Vec &iZ1);
     void init_imp_r_whz(const Vec &imp_r);
     void calc_imp_r();
+    void calc_single_imp_r();
     void save_npy_files();
 
 private:
