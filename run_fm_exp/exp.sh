@@ -144,7 +144,7 @@ do
 		done
 
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.ffm ${cdir}/va.ffm
-		run_exp_imp ${cdir} ${root} ${mode} #| xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+		run_exp_imp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 
 		cd ${cdir}
 		echo 'va_logloss va_auc' > ${mode}.record; 
