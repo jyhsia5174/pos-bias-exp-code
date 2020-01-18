@@ -62,6 +62,11 @@ run_exp_imp(){
 	#cmd="${cmd}; tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
 	#cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
 	#cmd="${cmd}; cd ${rdir}"
+	#cd ${cdir}
+	echo 'va_logloss va_auc' > ${mode}.record; 
+	tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
+	tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
+	cd ${root}
 	echo ${cmd}
 }
 
@@ -131,7 +136,7 @@ do
 		ln -sf ${root}/scripts/grid-imp.sh ${cdir}/grid.sh
 		ln -sf ${root}/scripts/do-test-imp.sh ${cdir}/do-test.sh
 		ln -sf ${root}/scripts/select_params.sh ${cdir}
-		ln -sf ${root}/tfboys-complex/train ${cdir}/train
+		ln -sf ${root}/tfboys/tfboys-complex/train ${cdir}/train
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/*gt*ffm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/item.ffm ${cdir}
 		for j in 'trva' 'tr'
@@ -146,11 +151,6 @@ do
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.ffm ${cdir}/va.ffm
 		run_exp_imp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 
-		cd ${cdir}
-		echo 'va_logloss va_auc' > ${mode}.record; 
-		tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
-		tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
-		cd ${root}
 	done
 done
 exit 0
