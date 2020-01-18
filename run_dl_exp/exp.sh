@@ -5,11 +5,34 @@ pos_bias=$2
 gpu=$3
 mode=$4
 model_name=$5
+part=$6
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] || [ -z "$5" ]; then
 	echo "Plz input: data_path & mode & pos_bias & GPU & model_name!!!!!"
 	exit 0
 fi
+
+if [ -z "$6" ]; then
+	part='all'
+fi
+
+exp_parts="der.0.01,der.0.1,der.comb.0.01,der.comb.0.1,derive.det,derive.random,all"
+pass="No"
+Backup_of_internal_field_separator=$IFS
+IFS=,
+for item in ${exp_parts};
+do
+	if [ ${item} == ${part} ]; then
+		pass="Yes"
+	fi
+done
+IFS=$Backup_of_internal_field_separator
+
+if [ "${pass}" == "No" ]; then
+	echo "exp part should be one of ${exp_parts}!"
+	exit 0
+fi
+echo "runing exps on the part-${part} of ${data_path} at mode-${mode} with pos_bias-${pos_bias}, through model-${model_name} in GPU-${gpu}"
 
 root=`pwd`
 
@@ -34,6 +57,11 @@ set -e
 exp_dir=`basename ${data_path}`
 for i in 'det' 'random'
 do
+	if [ "${part}" != 'all' ]; then
+		if [ "${part}" != "derive.$i" ]; then
+			continue
+		fi
+	fi
 	cdir=${exp_dir}/derive.${i}
 	mkdir -p ${cdir}
 	ln -sf ${root}/scripts/*.sh ${cdir}
@@ -52,6 +80,11 @@ for i in '.comb.' '.'
 do 
 	for k in 0.01 0.1
 	do 
+		if [ "${part}" != 'all' ]; then
+			if [ "${part}" != "der${i}${k}" ]; then
+				continue
+			fi
+		fi
 		cdir=${exp_dir}/der${i}${k}
 		mkdir -p ${cdir}
 		ln -sf ${root}/scripts/*.sh ${cdir}
