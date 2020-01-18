@@ -63,10 +63,10 @@ run_exp_imp(){
 	#cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record"
 	#cmd="${cmd}; cd ${rdir}"
 	#cd ${cdir}
-	echo 'va_logloss va_auc' > ${mode}.record; 
-	tail -n1 ${mode}.top | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
-	tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print $1,$2}' | rev >> ${mode}.record; 
-	cd ${root}
+	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record" 
+	cmd="${cmd}; tail -n1 ${mode}.top | rev | awk -F' ' '{print \$1,\$2}' | rev >> ${mode}.record" 
+	cmd="${cmd}; tail -n1 test-score.${mode}/*.log | rev | awk -F' ' '{print \$1,\$2}' | rev >> ${mode}.record" 
+	cmd="${cmd}; cd ${root}"
 	echo ${cmd}
 }
 
@@ -92,7 +92,7 @@ do
 	do
 		ln -sf ${root}/${data_path}/derive/${i}_${j}.ffm ${cdir}/${j}.ffm
 	done
-	run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+	run_exp ${cdir} ${root} ${mode} #| xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 done
 
 for i in '.comb.' '.'
@@ -117,7 +117,7 @@ do
 		do
 			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.ffm ${cdir}/${j}.ffm
 		done
-		run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+		run_exp ${cdir} ${root} ${mode} #| xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
 
@@ -136,7 +136,7 @@ do
 		ln -sf ${root}/scripts/grid-imp.sh ${cdir}/grid.sh
 		ln -sf ${root}/scripts/do-test-imp.sh ${cdir}/do-test.sh
 		ln -sf ${root}/scripts/select_params.sh ${cdir}
-		ln -sf ${root}/tfboys/tfboys-complex/train ${cdir}/train
+		ln -sf ${root}/tfboys/tfboys-imp-model/train ${cdir}/train
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/*gt*ffm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/item.ffm ${cdir}
 		for j in 'trva' 'tr'
