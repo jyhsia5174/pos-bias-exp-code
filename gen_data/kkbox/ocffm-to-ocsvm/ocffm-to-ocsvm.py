@@ -9,9 +9,11 @@ def build_dict(item, context_list):
     for line in rf:
         feats = line.strip().split()
         for tk in feats:
-            item_dict.setdefault(tk, -1)
-            if item_dict[tk] == -1:
-                item_dict[tk] = counter
+            f, idx, val = tk.split(':')
+            key = (f, idx)
+            item_dict.setdefault(key, -1)
+            if item_dict[key] == -1:
+                item_dict[key] = counter
                 counter += 1
     rf.close()
 
@@ -21,25 +23,21 @@ def build_dict(item, context_list):
             toks = line.strip().split()
             feats = toks[1:]
             for tk in feats:
-                context_dict.setdefault(tk, -1)
-                if context_dict[tk] == -1:
-                    context_dict[tk] = counter
+                f, idx, val = tk.split(':')
+                key = (f, idx)
+                context_dict.setdefault(key, -1)
+                if context_dict[key] == -1:
+                    context_dict[key] = counter
                     counter += 1
 
     return (item_dict, context_dict)
 
-def build_items_feat(item, item_dict):
-    items_to_feat = {}
-    rf = open(item, 'r')
-    for i, line in enumerate(rf):
-        items_to_feat[i] = map(lambda x: item_dict[x], line.strip().split())
-    rf.close()
-    return items_to_feat
-
 def convert_feature( feature_list, convert_dict):
     converted_feature_list = []
     for feat in feature_list:
-        converted_feature_list.append("{}:1".format(convert_dict[feat]))
+        f, idx, val = feat.split(':')
+        key = (f, idx)
+        converted_feature_list.append("{}:{}".format(convert_dict[key], val))
     return converted_feature_list
 
 def convert_item( item, item_dict):

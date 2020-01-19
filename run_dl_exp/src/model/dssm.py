@@ -9,6 +9,7 @@ class DSSM(torch.nn.Module):
         self.t1_bias1 = torch.nn.Parameter(torch.zeros((embed_dim,)))
         self.t1_fc2 = torch.nn.Linear(embed_dim, embed_dim, bias=True)  # add 1 for padding_idx
         #self.t1_fc3 = torch.nn.Linear(100, 32, bias=True)  # add 1 for padding_idx
+
         ## Tower 2 for item feature
         self.t2_bias1 = torch.nn.Parameter(torch.zeros((embed_dim,)))
         self.t2_fc2 = torch.nn.Linear(embed_dim, embed_dim, bias=True)  # add 1 for padding_idx
@@ -35,6 +36,4 @@ class DSSM(torch.nn.Module):
         #x2 = act(x2)
         ## merge
         out = torch.sigmoid(torch.sum(x1*x2, dim = 1))
-        #print(out.size())
-        #return out.squeeze(1)
         return out
