@@ -86,9 +86,9 @@ def get_model(name, dataset, embed_dim):
     elif name == 'dssm':
         return DSSM(input_dims, embed_dim)
     elif name == 'bidssm':
-        return BiDSSM(input_dims, 10)
+        return BiDSSM(input_dims, embed_dim, 10)
     elif name == 'extdssm':
-        return ExtDSSM(input_dims, 10)
+        return ExtDSSM(input_dims, embed_dim, 10)
     elif name == 'biffm':
         return BiFFM(input_dims, 10, embed_dim)
     elif name == 'extffm':
@@ -122,7 +122,7 @@ def model_helper(data_pack, model, model_name, device):
     elif model_name in ['bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
         context, item, target, pos, value = data_pack
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
-        if 'ffm' in model_name:
+        if 'ffm' in model_name or 'dssm' in model_name:
             y = model(context, item, pos, value)
         else:
             y = model(context, item, pos)

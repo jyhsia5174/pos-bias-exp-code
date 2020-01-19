@@ -15,7 +15,7 @@ ds_path='./'
 # Fixed parameter
 flag='train'
 epoch=50
-bs=128
+bs=1024
 
 # others
 log_path="logs"
