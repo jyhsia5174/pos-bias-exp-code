@@ -23,17 +23,17 @@ device="cuda:${gpu}"
 
 task(){
 # Set up fixed parameter and train command
-cmd="python ../../main.py"
-cmd="${cmd} --dataset_name ${ds}"
-cmd="${cmd} --train_part ${tr_part}"
-cmd="${cmd} --valid_part ${va_part}"
-cmd="${cmd} --dataset_path ${ds_path}"
-cmd="${cmd} --flag ${flag}"
-cmd="${cmd} --model_name ${model_name}"
-cmd="${cmd} --epoch ${epoch}"
-cmd="${cmd} --device ${device}"
-cmd="${cmd} --save_dir ${log_path}"
-cmd="${cmd} --batch_size ${bs}"
+train_cmd="python ../../main.py"
+train_cmd="${train_cmd} --dataset_name ${ds}"
+train_cmd="${train_cmd} --train_part ${tr_part}"
+train_cmd="${train_cmd} --valid_part ${va_part}"
+train_cmd="${train_cmd} --dataset_path ${ds_path}"
+train_cmd="${train_cmd} --flag ${flag}"
+train_cmd="${train_cmd} --model_name ${model_name}"
+train_cmd="${train_cmd} --epoch ${epoch}"
+train_cmd="${train_cmd} --device ${device}"
+train_cmd="${train_cmd} --save_dir ${log_path}"
+train_cmd="${train_cmd} --batch_size ${bs}"
 
 # Print out all parameter pair
 for lr in 0.0001 0.001
@@ -42,7 +42,7 @@ do
     do
         for k in 16 32 64 
         do
-            cmd="${cmd} --learning_rate ${lr}"
+            cmd="${train_cmd} --learning_rate ${lr}"
             cmd="${cmd} --weight_decay ${wd}"
             cmd="${cmd} --embed_dim ${k}"
             echo "${cmd}"
