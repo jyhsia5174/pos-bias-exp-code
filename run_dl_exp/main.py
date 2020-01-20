@@ -107,7 +107,7 @@ def get_model(name, dataset, embed_dim):
         raise ValueError('unknown model name: ' + name)
 
 
-def model_helper(data_pack, model, model_name, device):
+def model_helper(data_pack, model, model_name, device, mode='train'):
     if model_name in ['bilr', 'extlr']:
         data, target, pos = data_pack
         data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
@@ -122,6 +122,12 @@ def model_helper(data_pack, model, model_name, device):
     elif model_name in ['bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
         context, item, target, pos, value = data_pack
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+        if mode == 'test':
+            pos = torch.zeros_like(pos)
+        elif mode == 'train':
+            pass
+        else:
+            raise
         if 'ffm' in model_name or 'dssm' in model_name:
             y = model(context, item, pos, value)
         else:
@@ -161,7 +167,7 @@ def test(model, data_loader, device, model_name):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device)
+            y, target = model_helper(tmp, model, model_name, device, mode='test')
             num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
