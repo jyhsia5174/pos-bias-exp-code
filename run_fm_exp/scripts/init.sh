@@ -8,6 +8,9 @@ if [ "$machine_name" = "peanuts" ]; then
 elif [ "$machine_name" = "optima" ]; then
   echo "$machine_name"
   source /home/ybw/intel/mkl/bin/mklvars.sh intel64
+elif [ "$machine_name" = "patty" ]; then
+  echo "$machine_name"
+  source /home/johncreed/intel/mkl/bin/mklvars.sh intel64
 elif [[ "$machine_name" =~ linux[0-9]* ]]; then
   echo "$machine_name"
   source /tmp2/d08944012/intel/mkl/bin/mklvars.sh intel64
