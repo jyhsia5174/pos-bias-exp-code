@@ -16,6 +16,7 @@ from src.model.extlr import ExtLogisticRegression
 from src.model.dssm import DSSM
 from src.model.bidssm import BiDSSM
 from src.model.extdssm import ExtDSSM
+from src.model.ffm import FFM
 from src.model.biffm import BiFFM
 from src.model.extffm import ExtFFM
 from src.model.xdfm import ExtremeDeepFactorizationMachineModel
@@ -89,6 +90,8 @@ def get_model(name, dataset, embed_dim):
         return BiDSSM(input_dims, embed_dim, 10)
     elif name == 'extdssm':
         return ExtDSSM(input_dims, embed_dim, 10)
+    elif name == 'ffm':
+        return FFM(input_dims, embed_dim)
     elif name == 'biffm':
         return BiFFM(input_dims, 10, embed_dim)
     elif name == 'extffm':
@@ -119,7 +122,7 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
             y = model(context, item, value)
         else:
             y = model(context, item)
-    elif model_name in ['bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
+    elif model_name in ['ffm', 'bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
         context, item, target, pos, value = data_pack
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
         if mode == 'test':
@@ -190,7 +193,7 @@ def pred(model, data_loader, device, model_name, item_num):
         for j in range(len(rngs)):
             fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device)
+            y, target = model_helper(tmp, model, model_name, device, mode='test')
             num_of_user = y.size()[0]//item_num
             #with open('dssm-unif.prob', 'a') as f:
             #    y = y.tolist()
@@ -223,7 +226,7 @@ def main(dataset_name,
          save_dir):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    if model_name in ['dssm', 'bidssm', 'extdssm', 'biffm', 'extffm', 'xdfm', 'dfm', 'dcn', 'bixdfm', 'extxdfm']:
+    if model_name in ['dssm', 'bidssm', 'extdssm', 'ffm', 'biffm', 'extffm', 'xdfm', 'dfm', 'dcn', 'bixdfm', 'extxdfm']:
         collate_fn = collate_fn_for_dssm  # output data: [context, item, pos]
     else:
         collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
