@@ -171,6 +171,7 @@ def test(model, data_loader, device, model_name):
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode='test')
+            y *= 2
             num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
@@ -194,6 +195,7 @@ def pred(model, data_loader, device, model_name, item_num):
             fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode='test')
+            y *= 2
             num_of_user = y.size()[0]//item_num
             #with open('dssm-unif.prob', 'a') as f:
             #    y = y.tolist()
