@@ -118,9 +118,8 @@ class PositionDataset(Dataset):
                 data = np_array[2:].reshape(2, -1)[0, :]  # context
                 value = np_array[2:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
         if self.tr_max_dim > 0:
-            ctx = data[data <= self.tr_max_dim]
-            value = value[data <= self.tr_max_dim]
-        return {'context':ctx, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
+            data, value = data[data <= self.tr_max_dim], value[data <= self.tr_max_dim]
+        return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
 
 
     def get_max_dim(self):
