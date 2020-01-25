@@ -119,6 +119,7 @@ class PositionDataset(Dataset):
                 value = np_array[2:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
         if self.tr_max_dim > 0:
             data = data[data <= self.tr_max_dim]
+            value = value[data <= self.tr_max_dim]
         return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
 
 
