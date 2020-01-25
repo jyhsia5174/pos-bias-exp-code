@@ -19,6 +19,7 @@ wd=`python select_params.py logs ${mode} | cut -d' ' -f2`
 bs=`python select_params.py logs ${mode} | cut -d' ' -f3` 
 k=`python select_params.py logs ${mode} | cut -d' ' -f4`
 epoch=`python select_params.py logs ${mode} | cut -d' ' -f5`
+epoch=$((${epoch}+1))
 
 # others 
 log_path="test-score.${mode}"
