@@ -80,8 +80,9 @@ class PositionDataset(Dataset):
                         flag = '1'
                     pairs.extend([int(item_idx), int(flag)])
                 feature = pairs + context + value
-                if  feature[-1] > max_dim:
-                    max_dim = feature[-1]
+                tmp_max_dim = max(pairs+context)
+                if tmp_max_dim > max_dim:
+                    max_dim = tmp_max_dim
                 feature = np.array(feature, dtype=np.int32)  # [label, item_idx, position, feature_idx]
                 value = np.array(value, dtype=np.float32)
                 buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim))
