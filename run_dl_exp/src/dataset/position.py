@@ -31,7 +31,7 @@ class PositionDataset(Dataset):
             self.item_num = np.frombuffer(txn.get(b'item_num'), dtype=np.int32)[0]
             self.pos_num = np.frombuffer(txn.get(b'pos_num'), dtype=np.int32)[0]
             print('Totally %d items, %d dims'%(self.item_num, self.max_dim))
-            self.length = self.num_of_pos*(txn.stat()['entries'] - self.item_num - 3) if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 3)
+            self.length = self.pos_num*(txn.stat()['entries'] - self.item_num - 3) if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 3)
     
     def __build_cache(self, data_path, item_path, cache_path):
         max_dim = np.zeros(1, dtype=np.int32)
@@ -52,11 +52,11 @@ class PositionDataset(Dataset):
                 
             for buf in self.__yield_buffer(data_path):
                 with env.begin(write=True) as txn:
-                    for key, value, max_dim_buf, pos_num in buf:
+                    for key, value, max_dim_buf, pos_num[0] in buf:
                         txn.put(key, value)
                         if  max_dim_buf > max_dim[0]:
                             max_dim[0] = max_dim_buf
-
+        
             with env.begin(write=True) as txn:
                 txn.put(b'max_dim', max_dim.tobytes())
                 txn.put(b'item_num', item_num.tobytes())
