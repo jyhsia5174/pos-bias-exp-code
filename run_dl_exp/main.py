@@ -81,27 +81,27 @@ def get_model(name, dataset, embed_dim):
     if name == 'lr':
         return LogisticRegression(input_dims)
     elif name == 'bilr':
-        return BiLogisticRegression(input_dims, 10)
+        return BiLogisticRegression(input_dims, dataset.pos_num)
     elif name == 'extlr':
-        return ExtLogisticRegression(input_dims, 10)
+        return ExtLogisticRegression(input_dims, dataset.pos_num)
     elif name == 'dssm':
         return DSSM(input_dims, embed_dim)
     elif name == 'bidssm':
-        return BiDSSM(input_dims, embed_dim, 10)
+        return BiDSSM(input_dims, embed_dim, dataset.pos_num)
     elif name == 'extdssm':
-        return ExtDSSM(input_dims, embed_dim, 10)
+        return ExtDSSM(input_dims, embed_dim, dataset.pos_num)
     elif name == 'ffm':
         return FFM(input_dims, embed_dim)
     elif name == 'biffm':
-        return BiFFM(input_dims, 10, embed_dim)
+        return BiFFM(input_dims, dataset.pos_num, embed_dim)
     elif name == 'extffm':
-        return ExtFFM(input_dims, 10, embed_dim)
+        return ExtFFM(input_dims, dataset.pos_num, embed_dim)
     elif name == 'xdfm':
         return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     elif name == 'bixdfm':
-        return BiExtremeDeepFactorizationMachineModel(input_dims, 10, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
+        return BiExtremeDeepFactorizationMachineModel(input_dims, dataset.pos_num, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     elif name == 'extxdfm':
-        return ExtExtremeDeepFactorizationMachineModel(input_dims, 10, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
+        return ExtExtremeDeepFactorizationMachineModel(input_dims, dataset.pos_num, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     elif name == 'dfm':
         return DeepFactorizationMachineModel(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     elif name == 'dcn':
@@ -111,6 +111,7 @@ def get_model(name, dataset, embed_dim):
 
 
 def model_helper(data_pack, model, model_name, device, mode='train'):
+    fac = 1.0
     if model_name in ['bilr', 'extlr']:
         data, target, pos = data_pack
         data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
@@ -127,10 +128,12 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
         if mode == 'test':
             pos = torch.zeros_like(pos)
+            if 'bi' in mode:
+                fac = 2.0
         elif mode == 'train':
             pass
         else:
-            raise
+            raise(ValueError, "model_helper's mode %s is wrong!"%mode)
         if 'ffm' in model_name or 'dssm' in model_name:
             y = model(context, item, pos, value)
         else:
@@ -139,7 +142,7 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
         data, target, pos = data_pack
         data, target = data.to(device, torch.long), target.to(device, torch.float)
         y = model(data)
-    return y, target
+    return fac*y, target
 
 
 def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=1000):
@@ -171,7 +174,6 @@ def test(model, data_loader, device, model_name):
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode='test')
-            y *= 2
             num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
@@ -195,7 +197,6 @@ def pred(model, data_loader, device, model_name, item_num):
             fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode='test')
-            y *= 2
             num_of_user = y.size()[0]//item_num
             #with open('dssm-unif.prob', 'a') as f:
             #    y = y.tolist()

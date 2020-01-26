@@ -29,12 +29,14 @@ class PositionDataset(Dataset):
         with self.env.begin(write=False) as txn:
             self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
             self.item_num = np.frombuffer(txn.get(b'item_num'), dtype=np.int32)[0]
+            self.pos_num = np.frombuffer(txn.get(b'pos_num'), dtype=np.int32)[0]
             print('Totally %d items, %d dims'%(self.item_num, self.max_dim))
-            self.length = 10*(txn.stat()['entries'] - self.item_num - 2) if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 2)
+            self.length = self.num_of_pos*(txn.stat()['entries'] - self.item_num - 3) if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 3)
     
     def __build_cache(self, data_path, item_path, cache_path):
         max_dim = np.zeros(1, dtype=np.int32)
         item_num = np.zeros(1, dtype=np.int32)
+        pos_num = np.zeros(1, dtype=np.int32)
         with lmdb.open(cache_path, map_size=int(1e11)) as env:
             i = 0
             with open(item_path, 'r') as fi:
@@ -50,7 +52,7 @@ class PositionDataset(Dataset):
                 
             for buf in self.__yield_buffer(data_path):
                 with env.begin(write=True) as txn:
-                    for key, value, max_dim_buf in buf:
+                    for key, value, max_dim_buf, pos_num in buf:
                         txn.put(key, value)
                         if  max_dim_buf > max_dim[0]:
                             max_dim[0] = max_dim_buf
@@ -58,9 +60,10 @@ class PositionDataset(Dataset):
             with env.begin(write=True) as txn:
                 txn.put(b'max_dim', max_dim.tobytes())
                 txn.put(b'item_num', item_num.tobytes())
+                txn.put(b'pos_num', pos_num.tobytes())
 
     def __yield_buffer(self, data_path, buffer_size=int(1e5)):
-        sample_idx, max_dim = 0, 0
+        sample_idx, max_dim, pos_num = 0, 0, 0
         buf = list()
         with open(data_path, 'r') as fd:
             pbar = tqdm(fd, mininterval=1, smoothing=0.1)
@@ -69,6 +72,7 @@ class PositionDataset(Dataset):
                 line = line.strip()
                 labels, context = line.split(' ', 1)
                 labels = labels.strip().split(',')
+                pos_num = len(labels)
                 value = [int(float(i.split(':')[1])*100000) for i in context.split(' ')]
                 context = [int(i.split(':')[0]) for i in context.split(' ')]
                 pairs = list()
@@ -76,8 +80,9 @@ class PositionDataset(Dataset):
                     try:
                         item_idx, flag = l.split(':')[:2]
                     except:
-                        item_idx = l
-                        flag = '1'
+                        #item_idx = l
+                        #flag = '1'
+                        raise(ValueError, 'the label info %s is wrong, plz check!'%l)
                     pairs.extend([int(item_idx), int(flag)])
                 feature = pairs + context + value
                 tmp_max_dim = max(pairs+context)
@@ -85,7 +90,7 @@ class PositionDataset(Dataset):
                     max_dim = tmp_max_dim
                 feature = np.array(feature, dtype=np.int32)  # [label, item_idx, position, feature_idx]
                 value = np.array(value, dtype=np.float32)
-                buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim))
+                buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim, pos_num))
                 sample_idx += 1
                 if sample_idx % buffer_size == 0:
                     yield buf
@@ -97,8 +102,8 @@ class PositionDataset(Dataset):
 
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
         if not self.test_flag:
-            context_idx = int(idx)//10
-            pos = int(idx)%10
+            context_idx = int(idx)//self.pos_num
+            pos = int(idx)%self.pos_num
             with self.env.begin(write=False) as txn:
                 np_array = np.frombuffer(txn.get(struct.pack('>I', context_idx)), dtype=np.int32)
                 item_idx = np_array[pos*2]
