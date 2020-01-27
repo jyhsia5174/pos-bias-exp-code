@@ -128,7 +128,7 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
         if mode == 'test':
             pos = torch.zeros_like(pos)
-            if 'bi' in mode:
+            if 'bi' in model_name:
                 fac = 2.0
         elif mode == 'train':
             pass
