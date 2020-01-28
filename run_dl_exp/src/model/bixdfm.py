@@ -129,6 +129,8 @@ class BiExtremeDeepFactorizationMachineModel(torch.nn.Module):
         embed_x = self.embedding(x1, x2)
         #print(embed_x.size())
         x = self.linear(x1, x2) + self.cin(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
-        x3 = torch.sum(self.embed2(x3), dim = 1)  # (batch_size,)
-        x3 = torch.sigmoid(x3).squeeze(1) 
-        return torch.sigmoid(x.squeeze(1)) * x3
+        x3_embed = torch.sum(self.embed2(x3), dim = 1)
+        x3_embed[x3 == 0] = float('inf')
+        x3_out = torch.sigmoid(x3_embed).squeeze(1)
+
+        return torch.sigmoid(x.squeeze(1)) * x3_out

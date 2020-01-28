@@ -14,7 +14,10 @@ class BiLogisticRegression(torch.nn.Module):
     def forward(self, x1, x2):
         x1 = torch.sum(self.fc1(x1), dim = 1) + self.bias1
         x1 = torch.sigmoid(x1)
-        x2 = torch.sum(self.fc2(x2), dim = 1)
-        x2 = torch.sigmoid(x2)
-        out = x1*x2
+        #x2 = torch.sum(self.fc2(x2), dim = 1)
+        #x2 = torch.sigmoid(x2)
+        x2_embed = torch.sum(self.embed2(x2), dim = 1)
+        x2_embed[x2 == 0] = float('inf')
+        x2_out = torch.sigmoid(x2_embed).squeeze(1)
+        out = x1*x2_out
         return out.squeeze(1)

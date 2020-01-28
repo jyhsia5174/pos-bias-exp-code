@@ -41,7 +41,8 @@ class BiDSSM(torch.nn.Module):
         #x2 = act(x2)
         ## merge
         x12 = torch.sigmoid(torch.sum(x1*x2, dim = 1))
-        x3 = torch.sum(self.embed2(x3), dim = 1)
-        x3 = torch.sigmoid(x3).squeeze(1)
-        out = x12*x3
+        x3_embed = torch.sum(self.embed2(x3), dim = 1)
+        x3_embed[x3 == 0] = float('inf')
+        x3_out = torch.sigmoid(x3_embed).squeeze(1)
+        out = x12*x3_out
         return out

@@ -110,8 +110,7 @@ def get_model(name, dataset, embed_dim):
         raise ValueError('unknown model name: ' + name)
 
 
-def model_helper(data_pack, model, model_name, device, mode='train'):
-    fac = 1.0
+def model_helper(data_pack, model, model_name, device, mode='wps'):
     if model_name in ['bilr', 'extlr']:
         data, target, pos = data_pack
         data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
@@ -126,11 +125,9 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
     elif model_name in ['ffm', 'bidssm', 'extdssm', 'biffm', 'extffm', 'bixdfm', 'extxdfm']:
         context, item, target, pos, value = data_pack
         context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
-        if mode == 'test':
+        if mode == 'wops':
             pos = torch.zeros_like(pos)
-            if 'bi' in model_name:
-                fac = 2.0
-        elif mode == 'train':
+        elif mode == 'wps':
             pass
         else:
             raise(ValueError, "model_helper's mode %s is wrong!"%mode)
@@ -142,8 +139,7 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
         data, target, pos = data_pack
         data, target = data.to(device, torch.long), target.to(device, torch.float)
         y = model(data)
-    #print('fac:%r'%fac)
-    return fac*y, target
+    return y, target
 
 
 def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=1000):
@@ -154,7 +150,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
     for i, tmp in enumerate(pbar):
-        y, target = model_helper(tmp, model, model_name, device, 'train')
+        y, target = model_helper(tmp, model, model_name, device, 'wps')
         loss = criterion(y, target.float())
         model.zero_grad()
         loss.backward()
@@ -166,7 +162,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             total_loss = 0
     return loss.item()
 
-def test(model, data_loader, device, model_name, mode='train'):
+def test(model, data_loader, device, model_name, mode='wps'):
     model.eval()
     #handle = model.fc2.register_forward_hook(hook)
     #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
@@ -197,7 +193,7 @@ def pred(model, data_loader, device, model_name, item_num):
         for j in range(len(rngs)):
             fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device, mode='test')
+            y, target = model_helper(tmp, model, model_name, device, mode='wops')
             num_of_user = y.size()[0]//item_num
             #with open('dssm-unif.prob', 'a') as f:
             #    y = y.tolist()
@@ -246,32 +242,32 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
-                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'train')
+                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
                 #log.write('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
-    elif flag == 'test':
+    elif flag == 'pred':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)
         item_num = valid_dataset.get_item_num()
         refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
-        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, collate_fn=collate_fn)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=4, collate_fn=collate_fn)
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     elif flag == 'test_auc':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn)
         #print(device)
         model = torch.load(model_path, map_location=device)
-        va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'test')
+        va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
         print("model logloss auc")
         print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
         #pred(model, valid_data_loader, device, model_name, item_num)
     else:
-        raise ValueError('Flag should be "train"/"test"/"test_auc"!')
+        raise ValueError('Flag should be "train"/"pred"/"test_auc"!')
 
 
 

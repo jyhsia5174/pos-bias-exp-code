@@ -14,7 +14,7 @@ ds_path='./'
 
 # Fixed parameter
 flag='train'
-epoch=50
+epoch=30
 bs=1024
 
 # others
@@ -36,9 +36,9 @@ train_cmd="${train_cmd} --save_dir ${log_path}"
 train_cmd="${train_cmd} --batch_size ${bs}"
 
 # Print out all parameter pair
-for lr in 0.0001 0.001
+for lr in 0.001 
 do
-    for wd in 1e-2 1e-4 1e-6 
+    for wd in 1e-6
     do
         for k in 16 32 64 
         do

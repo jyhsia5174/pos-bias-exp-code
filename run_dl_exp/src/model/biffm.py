@@ -18,7 +18,8 @@ class BiFFM(torch.nn.Module):
 
         ## merge
         x12 = torch.sigmoid(torch.sum(x1*x2, dim=1))  # (batch_size,)
-        x3 = torch.sum(self.embed2(x3), dim = 1)  # (batch_size,)
-        x3 = torch.sigmoid(x3).squeeze(1) 
-        out = x12*x3  # ffm_prob*pos_prob
+        x3_embed = torch.sum(self.embed2(x3), dim = 1)
+        x3_embed[x3 == 0] = float('inf')
+        x3_out = torch.sigmoid(x3_embed).squeeze(1)
+        out = x12*x3_out  # ffm_prob*pos_prob
         return out
