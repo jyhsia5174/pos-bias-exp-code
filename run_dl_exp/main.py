@@ -142,6 +142,7 @@ def model_helper(data_pack, model, model_name, device, mode='train'):
         data, target, pos = data_pack
         data, target = data.to(device, torch.long), target.to(device, torch.float)
         y = model(data)
+    #print('fac:%r'%fac)
     return fac*y, target
 
 
@@ -153,7 +154,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
     for i, tmp in enumerate(pbar):
-        y, target = model_helper(tmp, model, model_name, device)
+        y, target = model_helper(tmp, model, model_name, device, 'train')
         loss = criterion(y, target.float())
         model.zero_grad()
         loss.backward()
@@ -165,7 +166,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             total_loss = 0
     return loss.item()
 
-def test(model, data_loader, device, model_name):
+def test(model, data_loader, device, model_name, mode='train'):
     model.eval()
     #handle = model.fc2.register_forward_hook(hook)
     #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
@@ -173,7 +174,7 @@ def test(model, data_loader, device, model_name):
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device, mode='test')
+            y, target = model_helper(tmp, model, model_name, device, mode)
             num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
@@ -236,8 +237,8 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -245,7 +246,7 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
-                va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
+                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'train')
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
@@ -265,7 +266,7 @@ def main(dataset_name,
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, collate_fn=collate_fn)
         #print(device)
         model = torch.load(model_path, map_location=device)
-        va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
+        va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'test')
         print("model logloss auc")
         print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
         #pred(model, valid_data_loader, device, model_name, item_num)
