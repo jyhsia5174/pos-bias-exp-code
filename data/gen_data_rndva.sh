@@ -9,7 +9,7 @@ if [ -z "$1" ] || [ -z "$2" ]; then
 	exit 0
 fi
 
-set -x
+set -ex
 # original data
 cd ${data_path}
 mkdir origin

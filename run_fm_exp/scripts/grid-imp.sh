@@ -2,9 +2,9 @@
 . ./init.sh
 
 w_train=(1.0 0.25 0.0625 0.015625 0.00390625 0.0009765625 0.000244140625 6.103515625e-05 1.52587890625e-05)
-l_train=(4)
+l_train=(1)
 t=50
-d=64
+d=32
 c=8
 
 item='item.ffm'
@@ -27,7 +27,7 @@ do
 		cmd="${cmd} -w $w"
 		cmd="${cmd} -d $d"
 		cmd="${cmd} -t ${t}"
-		#cmd="${cmd} -imp-r 0"
+		cmd="${cmd} -imp-r 0"
 		cmd="${cmd} -c ${c}"
 		#cmd="${cmd} --save-model"
 		cmd="${cmd} -p ${te} ${item} ${tr} ${imp} > $logs_path/${l}_${w}_${d}"

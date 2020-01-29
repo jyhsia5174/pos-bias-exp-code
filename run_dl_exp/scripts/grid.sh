@@ -36,11 +36,11 @@ train_cmd="${train_cmd} --save_dir ${log_path}"
 train_cmd="${train_cmd} --batch_size ${bs}"
 
 # Print out all parameter pair
-for lr in 0.001 
+for lr in 0.01 0.001 0.0001
 do
-    for wd in 1e-6
+    for wd in 1e-5 1e-6 1e-7
     do
-        for k in 16 32 64 
+        for k in 32 
         do
             cmd="${train_cmd} --learning_rate ${lr}"
             cmd="${cmd} --weight_decay ${wd}"

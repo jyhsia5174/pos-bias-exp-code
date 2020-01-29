@@ -8,7 +8,7 @@ model_name=$5
 part=$6
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] || [ -z "$5" ]; then
-	echo "Plz input: data_path & mode & pos_bias & GPU & model_name!!!!!"
+	echo "Plz input: data_path & pos_bias & gpu_idx & mode & model_name!!!!!"
 	exit 0
 fi
 
