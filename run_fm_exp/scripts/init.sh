@@ -11,6 +11,9 @@ elif [ "$machine_name" = "optima" ]; then
 elif [ "$machine_name" = "patty" ]; then
   echo "$machine_name"
   source /home/johncreed/intel/mkl/bin/mklvars.sh intel64
+elif [ "$machine_name" = "daniel-WS" ]; then
+  echo "$machine_name"
+  source /home/daniel/Data/intel/mkl/bin/mklvars.sh intel64
 elif [[ "$machine_name" =~ linux[0-9]* ]]; then
   echo "$machine_name"
   source /tmp2/d08944012/intel/mkl/bin/mklvars.sh intel64

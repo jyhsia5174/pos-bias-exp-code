@@ -1,10 +1,26 @@
 #!/bin/bash
 . ./init.sh
 
+imp_type=$1
+imp_dir=$2
+mode=$3
+
+root=`pwd`
+if [ -d "${imp_dir}" ]; then
+	cd ${imp_dir}
+	imp_t=`python select_params.py logs ${mode} | cut -d' ' -f3`
+	imp_l=`python select_params.py logs ${mode} | cut -d' ' -f1`
+	imp_k=`python select_params.py logs ${mode} | cut -d' ' -f2`
+	cd ${root}
+else
+	echo "Can not find dir ${imp_dir}!"
+	exit 0
+fi
+
 w_train=(1.0 0.25 0.0625 0.015625 0.00390625 0.0009765625 0.000244140625 6.103515625e-05 1.52587890625e-05)
-l_train=(1)
+l_train=(${imp_l})
 t=50
-d=32
+d=${imp_k}
 c=8
 
 item='item.ffm'
@@ -27,7 +43,11 @@ do
 		cmd="${cmd} -w $w"
 		cmd="${cmd} -d $d"
 		cmd="${cmd} -t ${t}"
-		cmd="${cmd} -imp-r 0"
+		if [ "${imp_type}" == "avg" ]; then
+			cmd="${cmd} -imp-r 0"
+		else
+			cmd="${cmd} -L $imp_l -D $imp_k -T ${imp_t}"
+		fi
 		cmd="${cmd} -c ${c}"
 		#cmd="${cmd} --save-model"
 		cmd="${cmd} -p ${te} ${item} ${tr} ${imp} > $logs_path/${l}_${w}_${d}"
