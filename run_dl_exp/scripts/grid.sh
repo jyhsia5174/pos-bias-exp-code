@@ -5,6 +5,7 @@
 gpu=$1
 mode=$2
 model_name=$3
+ps=$4
 
 # Data set
 ds='pos'
@@ -34,6 +35,7 @@ train_cmd="${train_cmd} --epoch ${epoch}"
 train_cmd="${train_cmd} --device ${device}"
 train_cmd="${train_cmd} --save_dir ${log_path}"
 train_cmd="${train_cmd} --batch_size ${bs}"
+train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
 for lr in 0.01 0.001 0.0001

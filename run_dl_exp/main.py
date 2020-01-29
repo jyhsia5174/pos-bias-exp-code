@@ -223,7 +223,8 @@ def main(dataset_name,
          embed_dim,
          weight_decay,
          device,
-         save_dir):
+         save_dir,
+         ps):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
     if model_name in ['dssm', 'bidssm', 'extdssm', 'ffm', 'biffm', 'extffm', 'xdfm', 'dfm', 'dcn', 'bixdfm', 'extxdfm']:
@@ -242,7 +243,7 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
-                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
+                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
@@ -262,7 +263,7 @@ def main(dataset_name,
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=4, collate_fn=collate_fn)
         #print(device)
         model = torch.load(model_path, map_location=device)
-        va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
+        va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
         print("model logloss auc")
         print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
         #pred(model, valid_data_loader, device, model_name, item_num)
@@ -289,6 +290,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
+    parser.add_argument('--ps', default='wps')
     args = parser.parse_args()
     main(args.dataset_name,
          args.train_part,
@@ -303,5 +305,6 @@ if __name__ == '__main__':
          int(args.embed_dim),
          args.weight_decay,
          args.device,
-         args.save_dir)
+         args.save_dir,
+         args.ps)
 

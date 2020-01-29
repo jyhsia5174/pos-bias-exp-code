@@ -4,6 +4,7 @@
 # params 
 gpu=$1
 mode=$2
+ps=$3
 va_prefix="rnd_gt"
 root="test-score.${mode}"
 model_path=`find ${root} -name "*.pt"`
@@ -28,6 +29,7 @@ do
 		cmd="${cmd} --model_path ${model_path}"
 		cmd="${cmd} --device cuda:${gpu}"
 		cmd="${cmd} --batch_size 1024"
+		cmd="${cmd} --ps ${ps}"
 		echo "${cmd} > ${root}/${va_prefix}${i}${j}log"
 	done
 done

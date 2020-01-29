@@ -5,6 +5,7 @@
 gpu=$1
 mode=$2
 model_name=$3
+ps=$4
 
 # Data set
 ds='pos'
@@ -38,6 +39,7 @@ cmd="${cmd} --epoch ${epoch}"
 cmd="${cmd} --device ${device}"
 cmd="${cmd} --save_dir ${log_path}"
 cmd="${cmd} --batch_size ${bs}"
+cmd="${cmd} --ps ${ps}"
 cmd="${cmd} --learning_rate ${lr}"
 cmd="${cmd} --weight_decay ${wd}"
 cmd="${cmd} --embed_dim ${k}"
