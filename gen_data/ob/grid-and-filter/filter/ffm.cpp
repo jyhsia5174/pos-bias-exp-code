@@ -1455,7 +1455,7 @@ void ImpProblem::filter() {
     FILE * f_pr = fopen("propensious_filter.label", "w" );
     FILE * f_de = fopen("determined_filter.label", "w" );
 
-    const Vec price_vec = init_price_vec( bt.size() );
+    const Vec price_vec = Vec( bt.size(), 1.0 );
   
     ImpLong cnt = 0;
     const ImpLong batch_size = 1000000;
