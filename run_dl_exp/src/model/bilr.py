@@ -10,7 +10,7 @@ class BiLogisticRegression(torch.nn.Module):
         self.bias1 = torch.nn.Parameter(torch.zeros((1,)))
         self.fc2 = torch.nn.Embedding(inputSize2+1, 1, padding_idx=0) # add 1 for padding_idx
         #self.bias2 = torch.nn.Parameter(torch.zeros((1,)))
-        self.fc2.weight.data[0, :] = float('inf')
+        self.fc2.weight.data[0, :] = float(10000)
 
     def forward(self, x1, x2):
         x1 = torch.sum(self.fc1(x1), dim = 1) + self.bias1
