@@ -38,7 +38,7 @@ train_cmd="${train_cmd} --batch_size ${bs}"
 train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
-for lr in 0.01 0.001 0.0001
+for lr in 0.001 #0.001 0.0001
 do
     for wd in 1e-5 1e-6 1e-7
     do
