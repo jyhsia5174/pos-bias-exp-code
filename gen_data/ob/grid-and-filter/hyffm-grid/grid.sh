@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source init.sh
+
 c=5
 k=8
 t=20
