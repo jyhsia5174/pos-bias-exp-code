@@ -6,6 +6,9 @@ random_data='rd.trva.ffm'
 filter_data='filter.ffm'
 truth_data='truth.ffm'
 
+shuf ${data}  > ${data}.shuf
+data=${data}.shuf
+
 total_num=`wc -l ${data} | awk '{print $1}'`
 small_perc_total_num=`echo "scale=0;$total_num*5/100" | bc -l `
 large_perc_total_num=`echo "scale=0;$total_num*85/100" | bc -l `
