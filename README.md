@@ -10,6 +10,7 @@
 
 ```shell
 conda env create -f pos.yml
+conda activate py3.7
 ```
 
 ## Experiments
