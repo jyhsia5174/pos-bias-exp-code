@@ -1,3 +1,4 @@
+#! /bin/bash
 cd hybrid-ocffm
 source init.sh
 make
