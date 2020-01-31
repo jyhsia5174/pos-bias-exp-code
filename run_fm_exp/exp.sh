@@ -1,5 +1,7 @@
 #!/bin/bash
 
+(./build-binary.sh)
+
 data_path=$1
 mode=$2
 pos_bias=$3
