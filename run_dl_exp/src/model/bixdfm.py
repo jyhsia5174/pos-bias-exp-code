@@ -23,7 +23,7 @@ class BiExtremeDeepFactorizationMachineModel(torch.nn.Module):
         self.linear = FeaturesLinear(input_dims)
 
         torch.nn.init.xavier_uniform_(self.embed2.weight.data[1:, :])
-        self.embed2.weight.data[0, :] = float('inf')
+        self.embed2.weight.data[0, :] = float(10000)
 
     def forward(self, x1, x2, x3):
         """
