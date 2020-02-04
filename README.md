@@ -11,6 +11,8 @@
 ```shell
 conda env create -f pos.yml
 conda activate py3.7
+git clone https://github.com/johncreed/pos-bias-exp-code.git
+git submodule init; git submodule update;
 ```
 
 ## Experiments
