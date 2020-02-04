@@ -1,8 +1,13 @@
 #! /bin/bash
+root=`pwd`
 cd hybrid-ocffm
-source init.sh
+source ${root}/scripts/init.sh
 make
 cd ..
 cd tfboys/tfboys-imp-model
-source init.sh
+source ${root}/scripts/init.sh
+make
+cd ../..
+cd tfboys/tfboys-complex
+source ${root}/scripts/init.sh
 make
