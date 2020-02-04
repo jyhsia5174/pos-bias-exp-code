@@ -11,3 +11,7 @@ cd ../..
 cd tfboys/tfboys-complex
 source ${root}/scripts/init.sh
 make
+cd ../..
+cd tfboys/tfboys-complex-imp-grid
+source ${root}/scripts/init.sh
+make
