@@ -67,8 +67,8 @@ def hook(self, input, output):
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
-        return PositionDataset(path, data_prefix, True, max_dim, test_flag)
-        #return PositionDataset(path, data_prefix, rebuild_cache, max_dim, test_flag)
+        #return PositionDataset(path, data_prefix, True, max_dim, test_flag)
+        return PositionDataset(path, data_prefix, rebuild_cache, max_dim, test_flag)
     if name == 'a9a':
         return A9ADataset(path, training)
     else:
@@ -162,7 +162,7 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             closs = total_loss/log_interval
             pbar.set_postfix(loss=closs)
             total_loss = 0
-    return closs
+    return loss.item()
 
 def test(model, data_loader, device, model_name, mode='wps'):
     model.eval()
@@ -236,8 +236,8 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
