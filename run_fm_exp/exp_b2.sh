@@ -16,7 +16,7 @@ if [ -z "$4" ]; then
 	part='all'
 fi
 
-exp_parts="der.0.01,der.0.1,der.comb.0.01.imp.avg,der.comb.0.1.imp.avg,der.comb.0.01.imp.pw,der.comb.0.1.imp.pw,der.comb.0.01,der.comb.0.1,derive.det,derive.random,all"
+exp_parts="der.0.01,der.0.1,der.comb.0.01.imp.pw,der.comb.0.1.imp.pw,der.comb.0.01,der.comb.0.1,derive.det,derive.random,all"
 pass="No"
 Backup_of_internal_field_separator=$IFS
 IFS=,
@@ -125,7 +125,7 @@ do
 	done
 done
 
-for imp_type in 'pw' 'avg'
+for imp_type in 'pw' #'avg'
 do
 	for i in '.comb.' 
 	do 
