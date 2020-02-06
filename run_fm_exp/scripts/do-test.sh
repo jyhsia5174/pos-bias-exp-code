@@ -23,7 +23,7 @@ mkdir -p $log_path
 
 task(){
 
-for i in '.' '.10.'
+for i in '.' 
 do
 	for j in '' 'const.' 'pos.'
 	do

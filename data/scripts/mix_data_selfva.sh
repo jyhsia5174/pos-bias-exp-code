@@ -7,12 +7,6 @@ mode=$3
 set -x
 python gen_mix_data.py $1 $2 $3
 
-#for i in 'svm' 'ffm'
-#do
-#	ln -sf select_trva.${i} select_tr.${i}
-#	ln -sf ${root}/random_va.${i} select_va.${i}
-#done
-
 ln -sf ${root}/*gt.*m ./
 ln -sf ${root}/item.* ./
 ln -sf ${root}/truth.svm ./
@@ -25,4 +19,8 @@ do
 	split -l ${num_tr} select_trva.${j}
 	mv xaa select_tr.${j}
 	mv xab select_va.${j}
+	if [ "$mode" == ".comb." ]; then
+		rm select_va.${j}
+		ln -sf ../der.${rnd_ratio}/select_va.${j} ./
+	fi
 done
