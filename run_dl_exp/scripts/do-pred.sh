@@ -13,7 +13,7 @@ model_name=`echo $(basename ${model_path}) | cut -d'_' -f1`
 echo "model_name: ${model_name}, model_path: ${model_path}"
 
 task() {
-for i in '.' '.10.'
+for i in '.' 
 do
 	for j in '' 'const.' 'pos.'
 	do

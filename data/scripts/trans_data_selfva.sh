@@ -37,14 +37,14 @@ do
 	#ln -sf det_tr.${i} det_trva.${i}
 	#ln -sf random_tr.${i} random_trva.${i}
 	#ln -sf random_va.${i} det_va.${i}
-	for c in `seq 1 10`
-	do
-		cat truth.${i} >> truth.10.${i}
-	done
+	#for c in `seq 1 10`
+	#do
+	#	cat truth.${i} >> truth.10.${i}
+	#done
 	for j in '.' '.const.' '.pos.'
 	do
 		python gen_rnd_gt.py truth.${i} rnd_gt${j}${i} ${num_item} ${j} ${pos_bias} &
-		python gen_rnd_gt.py truth.10.${i} rnd_gt.10${j}${i} ${num_item} ${j} ${pos_bias} &
+		#python gen_rnd_gt.py truth.10.${i} rnd_gt.10${j}${i} ${num_item} ${j} ${pos_bias} &
 	done
 	wait
 done
