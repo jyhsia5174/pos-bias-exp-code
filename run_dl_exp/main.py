@@ -236,8 +236,8 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -256,13 +256,13 @@ def main(dataset_name,
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)
         item_num = valid_dataset.get_item_num()
         refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
-        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, pin_memory=True)
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     elif flag == 'test_auc':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
         #print(device)
         model = torch.load(model_path, map_location=device)
         va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
