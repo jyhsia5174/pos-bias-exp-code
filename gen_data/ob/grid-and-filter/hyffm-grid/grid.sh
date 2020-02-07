@@ -16,7 +16,7 @@ mkdir -p $logs_pth
 w_train=(1  0.25  0.0625  0.015625  0.00390625  0.0009765625  0.000244140625  6.103515625e-05  1.52587890625e-05)
 wn_train=(1)
 l_train=( 4 )
-r_train=(-2 -3 -4 -5 -6 -7 -8)
+r_train=(-8)
 
 task(){
   for w in ${w_train[@]} 
@@ -32,7 +32,7 @@ task(){
 }
 
 
-num_core=18
+num_core=4
 
 #task
 task | xargs -d '\n' -P $num_core -I {} sh -c {} &
