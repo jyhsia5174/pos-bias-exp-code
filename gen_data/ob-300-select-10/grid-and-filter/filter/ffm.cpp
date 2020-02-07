@@ -1392,10 +1392,6 @@ void ImpProblem::determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>
     vector<ImpLong> select_ten(select_idx.begin(), select_idx.begin()+max_t);
     sort(select_ten.begin(), select_ten.end());
 
-    for(auto a: select_ten)
-        cout << a << " ";
-    cout << endl;
-
     ImpInt t = 0;
     while( t < max_t ){
         idx_list.push_back( make_pair( indices[select_ten[t]], 1.0 ));
