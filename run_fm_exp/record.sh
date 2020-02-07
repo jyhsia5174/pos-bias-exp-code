@@ -10,7 +10,7 @@ do
     (( count++ ))
 done
 
-for i in 'der.comb.0.01.imp.avg' 'der.comb.0.1.imp.avg' 'der.comb.0.01.imp.pw' 'der.comb.0.1.imp.pw'
+for i in 'der.comb.0.01.imp.pw' 'der.comb.0.1.imp.pw'
 do
     ./record-imp.sh ${root}/${i} ${mode} > ${count}.record
     (( count++ ))
