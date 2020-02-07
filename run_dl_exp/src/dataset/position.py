@@ -6,9 +6,11 @@ import numpy as np
 import lmdb
 import shutil
 import struct
+import subprocess
 from tqdm import tqdm
 from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
+import torch.nn.utils.rnn as rnn_utils
 
 class PositionDataset(Dataset):
     def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, tr_max_dim=-1, test_flag=False):
@@ -30,13 +32,29 @@ class PositionDataset(Dataset):
             self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
             self.item_num = np.frombuffer(txn.get(b'item_num'), dtype=np.int32)[0]
             self.pos_num = np.frombuffer(txn.get(b'pos_num'), dtype=np.int32)[0]
-            print('Totally %d items, %d dims'%(self.item_num, self.max_dim))
-            self.length = self.pos_num*(txn.stat()['entries'] - self.item_num - 3) if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 3)
+            self.max_ctx_num = np.frombuffer(txn.get(b'max_ctx_num'), dtype=np.int32)[0]
+            self.max_item_num = np.frombuffer(txn.get(b'max_item_num'), dtype=np.int32)[0]
+            self.length = self.pos_num*(txn.stat()['entries'] - self.item_num - 5)//2 if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 5)//2
+            print('Totally %d items, %d dims, %d positions, %d samples'%(self.item_num, self.max_dim, self.pos_num, self.length))
     
     def __build_cache(self, data_path, item_path, cache_path):
         max_dim = np.zeros(1, dtype=np.int32)
         item_num = np.zeros(1, dtype=np.int32)
         pos_num = np.zeros(1, dtype=np.int32)
+        max_ctx_num = np.zeros(1, dtype=np.int32)
+        max_item_num = np.zeros(1, dtype=np.int32)
+
+        ctx_col = subprocess.run("awk 'BEGIN{max = 0}{if (NF+0 >= max+0) max=NF}END{print max}' %s"%data_path, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
+        item_col = subprocess.run("awk 'BEGIN{max = 0}{if (NF+0 >= max+0) max=NF}END{print max}' %s"%item_path, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
+        if ctx_col.returncode or item_col.returncode:
+            raise ValueError('Can get %s or %s max_col_num!'%(data_path, item_path))
+        else:
+            self.max_ctx_num = int(ctx_col.stdout.strip()) - 1
+            self.max_item_num = int(item_col.stdout.strip())
+            max_ctx_num[0] = self.max_ctx_num
+            max_item_num[0] = self.max_item_num
+            print('max_ctx_num:%d, max_item_num:%d'%(self.max_ctx_num, self.max_item_num))
+
         with lmdb.open(cache_path, map_size=int(1e11)) as env:
             i = 0
             with open(item_path, 'r') as fi:
@@ -44,7 +62,9 @@ class PositionDataset(Dataset):
                 pbar.set_description('Create position dataset cache: setup lmdb for item')
                 for line in pbar:
                     line = line.strip()
-                    item = np.array(sorted([int(j.split(':')[0]) for j in line.split(' ')]), dtype=np.int32)
+                    item = np.zeros(self.max_item_num, dtype=np.int32)
+                    for _num, j in enumerate(line.split(' ')):
+                        item[_num] = int(j.split(':')[0])
                     with env.begin(write=True) as txn:
                         txn.put(b'item_%d'%i, item.tobytes())
                         i += 1
@@ -52,8 +72,9 @@ class PositionDataset(Dataset):
                 
             for buf in self.__yield_buffer(data_path):
                 with env.begin(write=True) as txn:
-                    for key, value, max_dim_buf, pos_num[0] in buf:
-                        txn.put(key, value)
+                    for item_key, item_array, ctx_key, ctx_array, max_dim_buf, pos_num[0] in buf:
+                        txn.put(item_key, item_array)
+                        txn.put(ctx_key, ctx_array)
                         if  max_dim_buf > max_dim[0]:
                             max_dim[0] = max_dim_buf
         
@@ -61,6 +82,8 @@ class PositionDataset(Dataset):
                 txn.put(b'max_dim', max_dim.tobytes())
                 txn.put(b'item_num', item_num.tobytes())
                 txn.put(b'pos_num', pos_num.tobytes())
+                txn.put(b'max_ctx_num', max_ctx_num.tobytes())
+                txn.put(b'max_item_num', max_item_num.tobytes())
 
     def __yield_buffer(self, data_path, buffer_size=int(1e5)):
         sample_idx, max_dim, pos_num = 0, 0, 0
@@ -73,24 +96,18 @@ class PositionDataset(Dataset):
                 labels, context = line.split(' ', 1)
                 labels = labels.strip().split(',')
                 pos_num = len(labels)
-                value = [int(float(i.split(':')[1])*100000) for i in context.split(' ')]
-                context = [int(i.split(':')[0]) for i in context.split(' ')]
-                pairs = list()
-                for l in labels:   
-                    try:
-                        item_idx, flag = l.split(':')[:2]
-                    except:
-                        #item_idx = l
-                        #flag = '1'
-                        raise(ValueError, 'the label info %s is wrong, plz check!'%l)
-                    pairs.extend([int(item_idx), int(flag)])
-                feature = pairs + context + value
-                tmp_max_dim = max(pairs+context)
+                item_idx, item_value = zip(*[[int(j) for j in i.split(':')[:2]] for i in labels])
+                ctx_idx, ctx_value = zip(*[[float(j) for j in i.split(':')] for i in context.split(' ')])
+                item_array = np.zeros((2, pos_num), dtype=np.float32)
+                item_array[0, :] = item_idx
+                item_array[1, :] = item_value
+                ctx_array = np.zeros((2, self.max_ctx_num), dtype=np.float32)
+                ctx_array[0, :len(ctx_idx)] = ctx_idx
+                ctx_array[1, :len(ctx_value)] = ctx_value
+                tmp_max_dim = max(ctx_idx)
                 if tmp_max_dim > max_dim:
                     max_dim = tmp_max_dim
-                feature = np.array(feature, dtype=np.int32)  # [label, item_idx, position, feature_idx]
-                value = np.array(value, dtype=np.float32)
-                buf.append((struct.pack('>I', sample_idx), feature.tobytes(), max_dim, pos_num))
+                buf.append((b'citem_%d'%sample_idx, item_array.tobytes(), b'ctx_%d'%sample_idx ,ctx_array.tobytes(), max_dim, pos_num))
                 sample_idx += 1
                 if sample_idx % buffer_size == 0:
                     yield buf
@@ -100,31 +117,38 @@ class PositionDataset(Dataset):
     def __len__(self):
         return self.length
 
+    #@profile
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
         if not self.test_flag:
-            context_idx = int(idx)//self.pos_num
-            pos = int(idx)%self.pos_num
+            context_idx = idx//self.pos_num
+            pos = int(idx%self.pos_num)
             with self.env.begin(write=False) as txn:
-                np_array = np.frombuffer(txn.get(struct.pack('>I', context_idx)), dtype=np.int32)
-                item_idx = np_array[pos*2]
-                flag = np_array[pos*2 + 1]
+                item_array = np.frombuffer(txn.get(b'citem_%d'%context_idx), dtype=np.float32)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%context_idx), dtype=np.float32)
+                #print(item_array.shape, ctx_array.shape)
+                item_idx = item_array[pos]
+                flag = item_array[self.pos_num + pos]
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np_array[20:].reshape(2, -1)[0, :]  # context
-                value = np_array[20:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
+                ctx_idx = ctx_array[:self.max_ctx_num].copy()  # context
+                ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             pos += 1
         else:
             context_idx = int(idx)//self.item_num
+            item_idx = int(idx)%self.item_num 
             pos = 0
             with self.env.begin(write=False) as txn:
-                np_array = np.frombuffer(txn.get(struct.pack('>I', context_idx)), dtype=np.int32)
-                item_idx = int(idx)%self.item_num 
+                item_array = np.frombuffer(txn.get(b'citem_%d'%context_idx), dtype=np.float32)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%context_idx), dtype=np.float32)
                 flag = -1
                 item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                data = np_array[2:].reshape(2, -1)[0, :]  # context
-                value = np_array[2:].reshape(2, -1)[1, :].astype(np.float32)/100000  # context
+                ctx_idx = ctx_array[:self.max_ctx_num].copy()  # context
+                ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
         if self.tr_max_dim > 0:
-            data, value = data[data <= self.tr_max_dim], value[data <= self.tr_max_dim]
-        return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
+            ctx_idx[ctx_idx > self.tr_max_dim] = 0
+            ctx_value[ctx_idx > self.tr_max_dim] = 0
+        #return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
+        #print(data.shape, item.shape, flag, pos, item_idx, value.shape)
+        return ctx_idx, item, flag, np.array([pos]), item_idx, ctx_value  # pos \in {1,2,...9,10}, 0 for no-position
 
 
     def get_max_dim(self):
@@ -134,24 +158,34 @@ class PositionDataset(Dataset):
         return self.item_num
 
 if __name__ == '__main__':
-    from torch.utils.data import DataLoader
-    dataset = PositionDataset(dataset_path='../../../data/random', data_prefix='gt', rebuild_cache=False, tr_max_dim=-1, test_flag=1)
-    print('Start loading!')
-    #f = open('pos.svm', 'w')
-    print(len(dataset))
-    print(dataset.get_max_dim())
-    for idx in range(len(dataset)):
-        i = dataset[idx]
-        data = np.hstack((i['item'], i['context'])) 
-        label = i['label']
-        pos = i['pos']
-        #if 1 in sample_batched['label']:
-        #    print(i_batch, sample_batched)
-        #    break
-        print(idx, data, label, pos)
-        if idx > 1:
+    #@profile
+    #def collate_fn_for_dssm(batch):
+    #    print(batch)
+    #    context = [torch.LongTensor(i['context']) for i in batch]
+    #    value = [torch.FloatTensor(i['value']) for i in batch]
+    #    item = [torch.LongTensor(i['item']) for i in batch]
+    #    label = [i['label'] for i in batch]
+    #    pos = [i['pos'] for i in batch]
+    #    item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
+    #    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
+    #    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
+    #    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
+
+    #@profile
+    def main(dataset):
+        device='cuda:0'
+        #data_loader = DataLoader(dataset, batch_size=4096, num_workers=0, collate_fn=collate_fn_for_dssm, shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=4096, num_workers=0,)# shuffle=True)
+    
+        pbar = tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
+        for i, data_pack in enumerate(pbar):
+            context, item, target, pos, _, value = data_pack
+            context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+            #print(context[30:32], item[30:32], target[30:32], pos[30:32], value[30:32])
+            print(context.size(), item.size(), target.size(), pos.size(), value.size())
             break
-        #data = ['%d:1'%i for i in sorted(sample_batched['data'])] 
-        #label = "+1" if sample_batched['label'] else "-1"
-        #f.write("%s %s\n"%(label, " ".join(data)))
-    #f.close()
+            #print(idx, data, label, pos)
+
+    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=True, tr_max_dim=-1, test_flag=False)
+    #dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, test_flag=False)
+    main(dataset)

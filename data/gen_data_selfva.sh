@@ -9,7 +9,7 @@ if [ -z "$1" ] || [ -z "$2" ]; then
 	exit 0
 fi
 
-set -x
+set -ex
 # original data
 cd ${data_path}
 mkdir origin
@@ -49,9 +49,9 @@ do
 		cdir=${data_path}/der${i}${j}.imp
 		mkdir -p ${cdir} 
 		cd ${cdir}
-		ln -sf ${root}/scripts/mix_data_imp.sh ./
+		ln -sf ${root}/scripts/mix_data_imp_selfva.sh ./
 		ln -sf ${root}/scripts/sc_st_split.py ./
-		./mix_data_imp.sh ../derive/ ${j} 
+		./mix_data_imp_selfva.sh ../derive/ ${j} 
 		cd ${root}
 	done
 done

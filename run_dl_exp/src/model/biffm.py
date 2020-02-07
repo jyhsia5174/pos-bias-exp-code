@@ -10,6 +10,8 @@ class BiFFM(torch.nn.Module):
         self.embed2 = torch.nn.Embedding(posSize+1, 1, padding_idx=0)  # set position 0th as padding idx, real position starts from 1 to 10
         torch.nn.init.xavier_uniform_(self.embed1.weight.data[1:, :])
         torch.nn.init.xavier_uniform_(self.embed2.weight.data[1:, :])
+        #self.embed2.weight.data[0, :] = float('inf')
+        self.embed2.weight.data[0, :] = float(10000)
 
 
     def forward(self, x1, x2, x3, x4):  # x1: context, x2: item, x3: position
@@ -18,7 +20,7 @@ class BiFFM(torch.nn.Module):
 
         ## merge
         x12 = torch.sigmoid(torch.sum(x1*x2, dim=1))  # (batch_size,)
-        x3 = torch.sum(self.embed2(x3), dim = 1)  # (batch_size,)
-        x3 = torch.sigmoid(x3).squeeze(1) 
+        x3 = torch.sum(self.embed2(x3), dim = 1)
+        x3 = torch.sigmoid(x3).squeeze(1)
         out = x12*x3  # ffm_prob*pos_prob
         return out

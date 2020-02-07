@@ -37,6 +37,7 @@ build/
 #data
 #data/*
 kkbox.*
+ob.*
 Pva*
 Qva*
 *.lmdb

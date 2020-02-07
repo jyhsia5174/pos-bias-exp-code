@@ -25,11 +25,11 @@ task(){
 train_cmd="${train} -t ${t} -wn ${wn} -r ${r} -c ${c} --ns"
 
 # Print out all parameter pair
-for l in 16 32 64 #128
+for l in 625e-4 25e-2 1 4 16 32 #64 #128
 do
     for w in 0 
     do
-        for k in 64 16 32
+        for k in 32
         do
             cmd=${train_cmd}
             cmd="${cmd} -l ${l}"

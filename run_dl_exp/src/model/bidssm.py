@@ -18,6 +18,11 @@ class BiDSSM(torch.nn.Module):
         ## Pos
         self.embed2 = torch.nn.Embedding(posSize+1, 1, padding_idx=0)  # trans one-hot vector to 300 dimensions
 
+        ## Init
+        torch.nn.init.xavier_uniform_(self.embed1.weight.data[1:, :])
+        torch.nn.init.xavier_uniform_(self.embed2.weight.data[1:, :])
+        self.embed2.weight.data[0, :] = float(10000)
+
 
     def forward(self, x1, x2, x3, x4, use_relu=False):
         if use_relu:

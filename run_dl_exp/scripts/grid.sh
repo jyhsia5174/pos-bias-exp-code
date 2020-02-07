@@ -5,6 +5,7 @@
 gpu=$1
 mode=$2
 model_name=$3
+ps=$4
 
 # Data set
 ds='pos'
@@ -14,8 +15,8 @@ ds_path='./'
 
 # Fixed parameter
 flag='train'
-epoch=50
-bs=1024
+epoch=10
+bs=4096
 
 # others
 log_path="logs"
@@ -34,13 +35,14 @@ train_cmd="${train_cmd} --epoch ${epoch}"
 train_cmd="${train_cmd} --device ${device}"
 train_cmd="${train_cmd} --save_dir ${log_path}"
 train_cmd="${train_cmd} --batch_size ${bs}"
+train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
-for lr in 0.0001 0.001
+for lr in 0.001 #0.001 0.0001
 do
-    for wd in 1e-2 1e-4 1e-6 
+    for wd in 1e-5 1e-6 1e-7
     do
-        for k in 16 32 64 
+        for k in 32 
         do
             cmd="${train_cmd} --learning_rate ${lr}"
             cmd="${cmd} --weight_decay ${wd}"
