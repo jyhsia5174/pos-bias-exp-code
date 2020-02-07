@@ -10,5 +10,3 @@ check(){
 }
 
 check determined_filter.label
-check random_filter.label
-check propensious_filter.label 

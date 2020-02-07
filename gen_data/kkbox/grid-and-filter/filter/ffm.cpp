@@ -1383,22 +1383,10 @@ void ImpProblem::determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>
         indices[i] = i;
     }
     sort(indices.begin(), indices.end(), Comp(z.data()));
-  
-    // Pick random ten rank and sort it.
-    vector<ImpLong> select_idx(z.size());
-    for(int i = 0; i < select_idx.size(); i++)
-        select_idx[i] = i;
-    random_shuffle(select_idx.begin(), select_idx.end());
-    vector<ImpLong> select_ten(select_idx.begin(), select_idx.begin()+max_t);
-    sort(select_ten.begin(), select_ten.end());
-
-    for(auto a: select_ten)
-        cout << a << " ";
-    cout << endl;
-
+    
     ImpInt t = 0;
     while( t < max_t ){
-        idx_list.push_back( make_pair( indices[select_ten[t]], 1.0 ));
+        idx_list.push_back( make_pair( indices[t], 1.0 ));
         t++;
     }
 }
@@ -1499,15 +1487,15 @@ void ImpProblem::filter() {
                 z[j] *= price_vec[j];
             }
 
-            //random_filter(z, idx_list_rd[idx]);
-            //propensious_filter(z, idx_list_pr[idx]);
+            random_filter(z, idx_list_rd[idx]);
+            propensious_filter(z, idx_list_pr[idx]);
             determined_filter(z, idx_list_de[idx]);
         }
         
         for (ImpLong i = start; i < end; i++) {
             ImpLong idx = i - start;
-            //filter_output(i, f_rd, idx_list_rd[idx]);
-            //filter_output(i, f_pr, idx_list_pr[idx]);
+            filter_output(i, f_rd, idx_list_rd[idx]);
+            filter_output(i, f_pr, idx_list_pr[idx]);
             filter_output(i, f_de, idx_list_de[idx]);
         }
 
