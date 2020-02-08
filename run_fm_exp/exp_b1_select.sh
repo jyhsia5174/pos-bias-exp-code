@@ -29,9 +29,9 @@ run_exp(){
 set -e
 exp_dir=`basename ${data_path}`
 
-for i in 'det' 'random'
+for i in 'det' 
 do
-	cdir=${exp_dir}/derive.${i}.ps
+	cdir=${exp_dir}/derive.${i}.select.ps
 	mkdir -p ${cdir}
 	ln -sf ${root}/scripts/init.sh ${cdir}
 	ln -sf ${root}/scripts/grid-ps.sh ${cdir}/grid.sh
@@ -45,26 +45,5 @@ do
 		ln -sf ${root}/${data_path}/derive/${i}_${j}.ffm ${cdir}/${j}.ffm
 	done
 	run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-done
-
-for i in '.comb.'
-do 
-	for k in 0.01 0.1
-	do 
-		cdir=${exp_dir}/der${i}${k}.ps
-		mkdir -p ${cdir}
-		ln -sf ${root}/scripts/init.sh ${cdir}
-		ln -sf ${root}/scripts/grid-ps.sh ${cdir}/grid.sh
-		ln -sf ${root}/scripts/do-test-ps.sh ${cdir}/do-test.sh
-		ln -sf ${root}/scripts/select_params_ps.py ${cdir}/select_params_ps.py
-		ln -sf ${root}/tfboys/tfboys-complex-imp-grid/train ${cdir}/hytrain
-		ln -sf ${root}/${data_path}/derive/*gt*ffm ${cdir}
-		ln -sf ${root}/${data_path}/der${i}${k}/item.ffm ${cdir}
-		for j in 'trva' 'tr' 'va'
-		do
-			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.ffm ${cdir}/${j}.ffm
-		done
-		run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-	done
 done
 
