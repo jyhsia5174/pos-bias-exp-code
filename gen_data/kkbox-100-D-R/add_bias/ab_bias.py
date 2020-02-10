@@ -24,10 +24,13 @@ def output_bias_file( file_name ):
     of = open(ofile_name, 'w')
     pos_bias_list = init_pos_bias( 1.0 )
     print(pos_bias_list)
+
+    rd.seed(0)
     for line in rf:
         labels = line.strip().split()[0]
         feats = line.strip().split()[1:]
         toks = labels.strip().strip(',').split(',')
+        rd.shuffle(toks, rd.random)
         len(toks)
         for i, tk in enumerate(toks):
             if rd.random() >= pos_bias_list[i]:
