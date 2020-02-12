@@ -24,3 +24,5 @@ wait
 half_small_perc_total_num=`echo "scale=0;$small_perc_total_num/2" | bc -l `
 head -n $half_small_perc_total_num $random_data > rd.tr.ffm &
 tail -n $(($small_perc_total_num - $half_small_perc_total_num)) $random_data > rd.va.ffm &
+
+python random_select.py

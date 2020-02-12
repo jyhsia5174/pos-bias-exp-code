@@ -1217,10 +1217,10 @@ void ImpProblem::print_epoch_info(ImpInt t) {
         init_Pva_Qva_at_bt();
         //calc_gauc();
         //logloss();
-        //calc_auc();
+        calc_auc();
         //validate();
-        calc_logloss_mn();
-        cout << logloss_mn << endl;
+        //calc_logloss_mn();
+        cout << logloss_mn << " " << auc << endl;
     }
 }
 
