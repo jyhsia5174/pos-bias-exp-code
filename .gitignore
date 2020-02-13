@@ -21,7 +21,6 @@ build/
 *.swo
 *.swm
 *.param
-*.ipynb*
 
 
 # model training 
