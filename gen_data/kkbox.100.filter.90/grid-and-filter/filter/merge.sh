@@ -1,18 +1,18 @@
 # Config
-rd='random_filter.label'
-pr='propensious_filter.label'
-de='determined_filter.label'
+D='D.label'
+RD='RD.label'
+DR='DR.label'
 filter_data='filter.ffm'
 
 awk '{$1=""; print $0}' $filter_data > $filter_data.tmp &
 
-sed -i 's/,$//g' $rd 
-sed -i 's/,$//g' $pr 
-sed -i 's/,$//g' $de 
+sed -i 's/,$//g' $D 
+sed -i 's/,$//g' $RD 
+sed -i 's/,$//g' $DR 
 
-paste $rd $filter_data.tmp > random.ffm & 
-paste $pr $filter_data.tmp > prop.ffm &
-paste $de $filter_data.tmp > det.ffm &
+paste $D $filter_data.tmp > D.ffm & 
+paste $RD $filter_data.tmp > RD.ffm &
+paste $DR $filter_data.tmp > DR.ffm &
 
 wait
 rm $filter_data.tmp

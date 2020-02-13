@@ -10,9 +10,7 @@ check(){
 }
 
 
-check det.ffm.pos.bias 
-check det.ffm 
-check prop.ffm.pos.bias
-check prop.ffm
-check random.ffm.pos.bias
-check random.ffm
+for i in *.bias
+do
+    check $i
+done 

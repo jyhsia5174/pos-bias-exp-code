@@ -1323,49 +1323,6 @@ ImpDouble ImpProblem::func() {
 }
 
 const ImpInt max_t = 10;
-void ImpProblem::random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
-    idx_list.clear();
-
-    Vec probability_vec(z.size(), 1.0);
-    //random_device rd;
-    //mt19937 gen(rd());
-    ImpInt t = 0;
-    while( t < max_t ){
-       discrete_distribution<> dis(probability_vec.begin(), probability_vec.end());
-       ImpLong idx = dis(gen);
-       probability_vec[idx] = 0;
-       idx_list.push_back(make_pair(idx, 1.0 ));
-       t++;
-    }
-}
-
-void ImpProblem::propensious_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
-    idx_list.clear();
-    
-    ImpDouble prob_sum = 0;
-    Vec probability_vec(z.size());
-    for(ImpLong i = 0; i < z.size(); i++){
-        if(z[i] > 0)
-            probability_vec[i] = 1.0 / (1.0 + exp(-z[i]));
-        else
-            probability_vec[i] = exp(z[i]) / (1.0 + exp(z[i]));
-    }
-    for(auto i : probability_vec)
-       prob_sum += i;
-    //random_device rd;
-    //mt19937 gen(rd());
-
-    ImpInt t = 0;
-    while( t < max_t ){
-       discrete_distribution<> dis(probability_vec.begin(), probability_vec.end());
-       ImpLong idx = dis(gen);
-       idx_list.push_back( make_pair( idx, probability_vec[idx]/prob_sum ));
-       prob_sum -= probability_vec[idx];
-       probability_vec[idx] = 0;
-       t++;
-    }
-}
-
 class Comp{
     // Descending order
     const ImpDouble *dec_val;
@@ -1376,7 +1333,30 @@ class Comp{
     }
 };
 
-void ImpProblem::determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
+void ImpProblem::RD_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
+    idx_list.clear();
+    vector<ImpLong> indices(z.size(), 0);
+    for(ImpLong i = 0; i < indices.size(); i++){
+        indices[i] = i;
+    }
+    sort(indices.begin(), indices.end(), Comp(z.data()));
+  
+    // Pick random ten rank and sort it.
+    vector<ImpLong> select_idx(z.size());
+    for(int i = 0; i < select_idx.size(); i++)
+        select_idx[i] = i;
+    random_shuffle(select_idx.begin(), select_idx.end());
+    vector<ImpLong> select_ten(select_idx.begin(), select_idx.begin()+max_t);
+    sort(select_ten.begin(), select_ten.end());
+
+    ImpInt t = 0;
+    while( t < max_t ){
+        idx_list.push_back( make_pair( indices[select_ten[t]], 1.0 ));
+        t++;
+    }
+}
+
+void ImpProblem::D_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
     idx_list.clear();
     vector<ImpLong> indices(z.size(), 0);
     for(ImpLong i = 0; i < indices.size(); i++){
@@ -1391,7 +1371,25 @@ void ImpProblem::determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>
     }
 }
 
-void ImpProblem::filter_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong, ImpDouble>>& idx_list){
+void ImpProblem::list_output(const ImpLong i, FILE* f_out, const vector<pair<ImpLong, ImpDouble>>& idx_list){
+    for(auto p: idx_list){
+        ImpLong idx = p.first;
+        ImpInt label = 0; 
+        ImpDouble prob = p.second;
+        for(Node* y = Uva->Y[i]; y < Uva->Y[i+1]; y++){
+            if( idx == y->idx )
+                label = 1;
+        }
+        if(prob == 1)
+            fprintf(f_out, "%ld:%d:1,", idx, label);
+        else
+            fprintf(f_out, "%ld:%d:%.3e,", idx, label, prob);
+    }
+    fprintf(f_out, "\n");
+}
+
+void ImpProblem::random_list_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong, ImpDouble>> idx_list){
+    random_shuffle(idx_list.begin(), idx_list.end());
     for(auto p: idx_list){
         ImpLong idx = p.first;
         ImpInt label = 0; 
@@ -1451,17 +1449,16 @@ void ImpProblem::filter() {
  
 
     gen.seed(1);
-    FILE * f_rd = fopen("random_filter.label", "w" );
-    FILE * f_pr = fopen("propensious_filter.label", "w" );
-    FILE * f_de = fopen("determined_filter.label", "w" );
+    FILE * f_D = fopen("D.label", "w" );
+    FILE * f_DR = fopen("DR.label", "w" );
+    FILE * f_RD = fopen("RD.label", "w" );
 
     const Vec price_vec = Vec( bt.size(), 1.0 );
   
     ImpLong cnt = 0;
     const ImpLong batch_size = 1000000;
-    vector<pair<ImpLong, ImpDouble>> *idx_list_rd = new vector<pair<ImpLong, ImpDouble>>[batch_size];
-    vector<pair<ImpLong, ImpDouble>> *idx_list_pr = new vector<pair<ImpLong, ImpDouble>>[batch_size];
-    vector<pair<ImpLong, ImpDouble>> *idx_list_de = new vector<pair<ImpLong, ImpDouble>>[batch_size];
+    vector<pair<ImpLong, ImpDouble>> *idx_list_D = new vector<pair<ImpLong, ImpDouble>>[batch_size];
+    vector<pair<ImpLong, ImpDouble>> *idx_list_RD = new vector<pair<ImpLong, ImpDouble>>[batch_size];
     
     while(cnt*batch_size < Uva->m){
         ImpLong start = cnt*batch_size;
@@ -1487,28 +1484,26 @@ void ImpProblem::filter() {
                 z[j] *= price_vec[j];
             }
 
-            random_filter(z, idx_list_rd[idx]);
-            propensious_filter(z, idx_list_pr[idx]);
-            determined_filter(z, idx_list_de[idx]);
+            D_filter(z, idx_list_D[idx]);
+            RD_filter(z, idx_list_RD[idx]);
         }
         
         for (ImpLong i = start; i < end; i++) {
             ImpLong idx = i - start;
-            filter_output(i, f_rd, idx_list_rd[idx]);
-            filter_output(i, f_pr, idx_list_pr[idx]);
-            filter_output(i, f_de, idx_list_de[idx]);
+            list_output(i, f_D, idx_list_D[idx]);
+            random_list_output(i, f_DR, idx_list_D[idx]);
+            list_output(i, f_RD, idx_list_RD[idx]);
         }
 
         cnt++;
     }
 
-    delete[] idx_list_rd;
-    delete[] idx_list_pr;
-    delete[] idx_list_de;
+    delete[] idx_list_D;
+    delete[] idx_list_RD;
 
-    fclose(f_rd);
-    fclose(f_pr);
-    fclose(f_de);
+    fclose(f_D);
+    fclose(f_DR);
+    fclose(f_RD);
 }
 
 Vec ImpProblem::init_price_vec(const int price_list_size){

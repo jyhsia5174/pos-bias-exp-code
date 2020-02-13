@@ -2,12 +2,18 @@
 
 source init.sh
 
-l=16
-r=-6
-w=0.03125
+tr='filter.ffm.rnd.select'
+va='filter.ffm.rnd.select'
 
-t=4
+l=0.1
+r=0
+w=0
 
-./train -k 8 -l $l -t $t -r $r -w $w -wn 1  -c 5 -o filter.model item.ffm rd.trva.ffm & 
+t=20
 
-echo "./train -k 8 -l $l -t $t -r $r -w $w -wn 1  -c 5 -o filter.model item.ffm rd.trva.ffm" > filter.model.param
+
+cmd="./train -k 8 -l $l -t $t -r $r -w $w -wn 1  -c 10 -p ${va} -o filter.model item.ffm ${tr} > save_model.log"
+
+echo "${cmd}"
+echo "${cmd}" > filter.model.param
+echo "${cmd}" | xargs -I {} sh -c {} &
