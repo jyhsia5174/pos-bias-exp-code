@@ -1,11 +1,11 @@
 # Config
-de='det.ffm'
-pr='prop.ffm'
-rd='random.ffm'
+D='D.ffm'
+DR='DR.ffm'
+RD='RD.ffm'
 
-python ab_bias.py $rd&
-python ab_bias.py $pr&
-python ab_bias.py $de&
+python ab_bias.py $D&
+python ab_bias.py $DR&
+python ab_bias.py $RD&
 wait
 
 

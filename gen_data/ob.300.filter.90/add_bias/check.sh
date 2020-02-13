@@ -10,4 +10,7 @@ check(){
 }
 
 
-check $1 
+for i in *.bias
+do
+    check $i
+done 

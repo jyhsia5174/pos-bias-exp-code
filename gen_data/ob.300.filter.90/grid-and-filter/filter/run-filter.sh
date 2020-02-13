@@ -1,7 +1,7 @@
 #! /bin/bash
 
 item='item.ffm'
-tr5='rd.trva.ffm'
+tr5='filter.ffm.rnd.select'
 tr90='filter.ffm'
 model='filter.model'
 

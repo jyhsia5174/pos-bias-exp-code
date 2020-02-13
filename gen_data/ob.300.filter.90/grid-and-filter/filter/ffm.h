@@ -112,10 +112,11 @@ private:
     vector<ImpInt> top_k;
     mt19937 gen;
     
-    void random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
-    void propensious_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
-    void determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
-    void filter_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong, ImpDouble>>& idx_list);
+    
+    void D_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
+    void RD_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
+    void list_output(const ImpLong i, FILE* f_out, const vector<pair<ImpLong, ImpDouble>>& idx_list);
+    void random_list_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong, ImpDouble>> idx_list);
 
     void init_pair(const ImpInt &f12, const ImpInt &fi, const ImpInt &fj,
             const shared_ptr<ImpData> &d1, const shared_ptr<ImpData> &d2);
