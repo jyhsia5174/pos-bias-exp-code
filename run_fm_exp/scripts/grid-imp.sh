@@ -18,7 +18,7 @@ else
 fi
 
 w_train=(1.0 0.0625 0.00390625 0.000244140625 1.52587890625e-05)
-l_train=(`awk -v x=${imp_l} -v y=4.0 'BEGIN {printf "%f\n",x/y}'` ${imp_l})
+l_train=(`awk -v x=${imp_l} -v y=4.0 'BEGIN {printf "%g\n",x/y}'` ${imp_l})
 t=50
 d=${imp_k}
 c=8
