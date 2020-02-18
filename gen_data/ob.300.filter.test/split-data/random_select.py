@@ -1,4 +1,7 @@
 import random as rd
+import sys
+
+input_file=sys.argv[1]
 
 def file_len(fname):
     with open(fname) as f:
@@ -11,7 +14,7 @@ def random_select(fname, item_size):
     item_list = [i for i in range(item_size)]
     select_num = 10
 
-    with open(fname, 'r') as rf, open("{}.rnd.select".format(fname), 'w') as of:
+    with open(fname, 'r') as rf, open("{}.bin".format(fname), 'w') as of:
 
         for line in rf:
             label, features = line.strip().split(None, maxsplit=1)
@@ -33,4 +36,4 @@ def random_select(fname, item_size):
 
 if __name__ == '__main__':
     item_size = file_len('item.ffm')
-    random_select("filter.ffm", item_size)
+    random_select(input_file, item_size)

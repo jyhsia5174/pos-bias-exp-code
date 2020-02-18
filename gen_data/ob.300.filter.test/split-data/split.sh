@@ -21,8 +21,11 @@ tail -n $(($total_num - $small_perc_total_num - $large_perc_total_num)) ${data} 
 
 wait
 
-half_small_perc_total_num=`echo "scale=0;$small_perc_total_num/2" | bc -l `
-head -n $half_small_perc_total_num $random_data > rd.tr.ffm &
-tail -n $(($small_perc_total_num - $half_small_perc_total_num)) $random_data > rd.va.ffm &
+# Transform random_data to binary data
+python random_select.py ${random_data}
 
-python random_select.py
+# Split random_data to tr va
+half_small_perc_total_num=`echo "scale=0;$small_perc_total_num/2" | bc -l `
+head -n $half_small_perc_total_num "${random_data}.bin" > rd.tr.ffm.bin &
+tail -n $(($small_perc_total_num - $half_small_perc_total_num)) "${random_data}.bin" > rd.va.ffm.bin &
+

@@ -752,16 +752,10 @@ void ImpProblem::init_va(ImpInt size) {
     ImpInt start = 5;
 
     cout << "iter";
-    for (ImpInt i = 0; i < size; i++) {
-        top_k[i] = start;
-        cout.width(9);
-        cout << "( p@ " << start << ", ";
-        cout.width(6);
-        cout << "nDCG@" << start << " )";
-        start *= 2;
-    }
     cout.width(12);
     cout << "logloss";
+    cout.width(12);
+    cout << "auc";
     cout << endl;
 }
 
@@ -1216,11 +1210,15 @@ void ImpProblem::print_epoch_info(ImpInt t) {
         cout << t+1 << " ";
         init_Pva_Qva_at_bt();
         //calc_gauc();
-        //logloss();
+        logloss();
         calc_auc();
         //validate();
         //calc_logloss_mn();
-        cout << logloss_mn << " " << auc << endl;
+        
+        cout.width(12);
+        cout << loss;
+        cout.width(12);
+        cout << auc << endl;
     }
 }
 

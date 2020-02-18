@@ -1,22 +1,23 @@
 #!/bin/bash
 
 source init.sh
+make
 
 c=5
 k=8
 t=20
-tr=rd.tr.ffm
-va=rd.va.ffm
+tr=rd.tr.ffm.bin
+va=rd.va.ffm.bin
 item=item.ffm
-logs_pth=logs/${tr}.${va}.${k}
+logs_pth=logs/
 
 mkdir -p $logs_pth
 
 # 2^0 ~ 2^-11
-w_train=(1  0.25  0.0625  0.015625  0.00390625  0.0009765625  0.000244140625  6.103515625e-05  1.52587890625e-05)
+w_train=(0)
 wn_train=(1)
-l_train=( 4 )
-r_train=(-8)
+l_train=(6.25e-2 0.25 1 4 16)
+r_train=(0)
 
 task(){
   for w in ${w_train[@]} 
@@ -25,7 +26,7 @@ task(){
       do
         for l in ${l_train[@]}
         do
-          echo "./train -k $k -l $l -t ${t} -r $r -w $w -wn 1 -c ${c} -p ${va} ${item} ${tr} > $logs_pth/${tr}.$l.$r.$w"
+          echo "./train -k $k -l $l -t ${t} -r $r -w $w -wn 1 -c ${c} -p ${va} ${item} ${tr} > $logs_pth/$l"
         done
       done
   done
@@ -35,4 +36,4 @@ task(){
 num_core=4
 
 #task
-task | xargs -d '\n' -P $num_core -I {} sh -c {} &
+task | xargs -d '\n' -P $num_core -I {} sh -c {} 
