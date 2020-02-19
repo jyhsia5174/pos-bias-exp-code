@@ -9,6 +9,7 @@ check(){
 
 }
 
+check R.label
 check D.label
 check DR.label
 check RD.label

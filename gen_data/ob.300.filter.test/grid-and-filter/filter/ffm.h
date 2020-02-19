@@ -113,6 +113,7 @@ private:
     mt19937 gen;
     
     
+    void R_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
     void D_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
     void RD_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
     void list_output(const ImpLong i, FILE* f_out, const vector<pair<ImpLong, ImpDouble>>& idx_list);
