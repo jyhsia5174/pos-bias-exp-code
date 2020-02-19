@@ -1333,6 +1333,22 @@ class Comp{
     }
 };
 
+void ImpProblem::R_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
+    idx_list.clear();
+
+    Vec probability_vec(z.size(), 1.0);
+    //random_device rd;
+    //mt19937 gen(rd());
+    ImpInt t = 0;
+    while( t < max_t ){
+       discrete_distribution<> dis(probability_vec.begin(), probability_vec.end());
+       ImpLong idx = dis(gen);
+       probability_vec[idx] = 0;
+       idx_list.push_back(make_pair(idx, 1.0 ));
+       t++;
+    }
+}
+
 void ImpProblem::RD_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
     idx_list.clear();
     vector<ImpLong> indices(z.size(), 0);
@@ -1449,6 +1465,7 @@ void ImpProblem::filter() {
  
 
     gen.seed(1);
+    FILE * f_R = fopen("R.label", "w" );
     FILE * f_D = fopen("D.label", "w" );
     FILE * f_DR = fopen("DR.label", "w" );
     FILE * f_RD = fopen("RD.label", "w" );
@@ -1457,6 +1474,7 @@ void ImpProblem::filter() {
   
     ImpLong cnt = 0;
     const ImpLong batch_size = 1000000;
+    vector<pair<ImpLong, ImpDouble>> *idx_list_R = new vector<pair<ImpLong, ImpDouble>>[batch_size];
     vector<pair<ImpLong, ImpDouble>> *idx_list_D = new vector<pair<ImpLong, ImpDouble>>[batch_size];
     vector<pair<ImpLong, ImpDouble>> *idx_list_RD = new vector<pair<ImpLong, ImpDouble>>[batch_size];
     
@@ -1484,12 +1502,14 @@ void ImpProblem::filter() {
                 z[j] *= price_vec[j];
             }
 
+            R_filter(z, idx_list_R[idx]);
             D_filter(z, idx_list_D[idx]);
             RD_filter(z, idx_list_RD[idx]);
         }
         
         for (ImpLong i = start; i < end; i++) {
             ImpLong idx = i - start;
+            list_output(i, f_R, idx_list_R[idx]);
             list_output(i, f_D, idx_list_D[idx]);
             random_list_output(i, f_DR, idx_list_D[idx]);
             list_output(i, f_RD, idx_list_RD[idx]);
@@ -1498,9 +1518,11 @@ void ImpProblem::filter() {
         cnt++;
     }
 
+    delete[] idx_list_R;
     delete[] idx_list_D;
     delete[] idx_list_RD;
 
+    fclose(f_R);
     fclose(f_D);
     fclose(f_DR);
     fclose(f_RD);
