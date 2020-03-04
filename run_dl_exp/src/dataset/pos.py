@@ -13,104 +13,128 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
 class PositionDataset(Dataset):
-    def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, tr_max_dim=-1, test_flag=False):
-        self.tr_max_dim = tr_max_dim
+    def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, test_flag=False):
+        self.min_feat_cnt = 0  # drop feature if it appears less than {min_feat_cnt} times.
         self.test_flag = test_flag
-        data_path = os.path.join(dataset_path, data_prefix + '.svm')
-        item_path = os.path.join(dataset_path, 'item.svm')
-        assert Path(data_path).exists(), "%s does not exist!"%data_path
-        cache_path = os.path.join(dataset_path, data_prefix + '.lmdb')
 
         # build cache
+        item_path = os.path.join(dataset_path, 'item.ffm')
+        assert Path(item_path).exists(), "%s does not exist!"%item_path
+        data_path = os.path.join(dataset_path, data_prefix + '.ffm')
+        assert Path(data_path).exists(), "%s does not exist!"%data_path
+        cache_path = os.path.join(dataset_path, data_prefix + '.lmdb')
         if rebuild_cache or not Path(cache_path).exists():
             shutil.rmtree(cache_path, ignore_errors=True)
             if dataset_path is None:
                 raise ValueError('create cache: failed: dataset_path is None')
-            self.__build_cache(data_path, item_path, cache_path)
+            self.__build_cache(item_path, data_path, cache_path)
 
         # read data
         print('Reading data from %s.'%(cache_path))
         self.env = lmdb.open(cache_path, create=False, lock=False, readonly=True)
         with self.env.begin(write=False) as txn:
-            self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
-            self.item_num = np.frombuffer(txn.get(b'item_num'), dtype=np.int32)[0]
-            self.pos_num = np.frombuffer(txn.get(b'pos_num'), dtype=np.int32)[0]
-            self.max_ctx_num = np.frombuffer(txn.get(b'max_ctx_num'), dtype=np.int32)[0]
-            self.max_item_num = np.frombuffer(txn.get(b'max_item_num'), dtype=np.int32)[0]
-            self.length = self.pos_num*(txn.stat()['entries'] - self.item_num - 5)//2 if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 5)//2
+            #self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
+            self.item = np.frombuffer(txn.get(b'items'), dtype=np.float32)
+            self.item_num = self.item.shape[0]
+            self.pos_num = int(txn.get(b'pos_num'))
+            self.max_cntx_col = int(txn.get(b'max_cntx_col'))
+            self.max_item_col = int(txn.get(b'max_item_num'))
+            self.length = self.pos_num*(txn.stat()['entries'] - 4)//2 if not self.test_flag else self.item_num*(txn.stat()['entries'] - 4)//2
             print('Totally %d items, %d dims, %d positions, %d samples'%(self.item_num, self.max_dim, self.pos_num, self.length))
     
-    def __build_cache(self, data_path, item_path, cache_path):
-        max_dim = np.zeros(1, dtype=np.int32)
-        item_num = np.zeros(1, dtype=np.int32)
-        pos_num = np.zeros(1, dtype=np.int32)
-        max_ctx_num = np.zeros(1, dtype=np.int32)
-        max_item_num = np.zeros(1, dtype=np.int32)
+    def __get_feat_mapper(self, item_path, data_path):
+        item_num = 0
+        position_num = 0
+        max_item_col = 0
+        max_cntx_col = 0
 
-        ctx_col = subprocess.run("awk 'BEGIN{max = 0}{if (NF+0 >= max+0) max=NF}END{print max}' %s"%data_path, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
-        item_col = subprocess.run("awk 'BEGIN{max = 0}{if (NF+0 >= max+0) max=NF}END{print max}' %s"%item_path, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
-        if ctx_col.returncode or item_col.returncode:
-            raise ValueError('Can get %s or %s max_col_num!'%(data_path, item_path))
-        else:
-            self.max_ctx_num = int(ctx_col.stdout.strip()) - 1
-            self.max_item_num = int(item_col.stdout.strip())
-            max_ctx_num[0] = self.max_ctx_num
-            max_item_num[0] = self.max_item_num
-            print('max_ctx_num:%d, max_item_num:%d'%(self.max_ctx_num, self.max_item_num))
+        print('Create cache:')
+        feat_cnts = defaultdict(lambda: defaultdict(int))  # {field_id:str, feature:str, cnt:int}
+        with open(item_path) as f:
+            pbar = tqdm(f, mininterval=1, smoothing=0.1)
+            pbar.set_description('Counting item features')
+            for line in pbar:
+                values = line.strip().split(' ')
+                item_num += 1
+                max_item_col = max(max_item_col, len(values))
+                for data in values:
+                    field, feat, feat_value = data.split(':')
+                    #field += '_item'
+                    feat_cnts[int(field)][int(feat)] += 1
+        item_field_num = len(feat_cnts.items())
+
+        with open(data_path) as f:
+            pbar = tqdm(f, mininterval=1, smoothing=0.1)
+            pbar.set_description('Counting cntx features')
+            for line in pbar:
+                labels, values = line.strip().split(' ', 1)
+                labels = labels.split(',')
+                values = values.split(' ')
+                position_num = max(position, len(labels))
+                max_cntx_col = max(max_cntx_col, len(values))
+                for data in values:
+                    field, feat, feat_value = data.split(':')
+                    #field += '_cntx'
+                    feat_cnts[int(field)+item_field_num][int(feat)] += 1
+
+        feat_mapper = {field: {feat for feat, c in cnt.items() if c >= self.min_threshold} for field, cnt in feat_cnts.items()}  # {field_id, feature_set} 
+        #feat_mapper = {field: {feat: idx for idx, feat in enumerate(feats)} for field, feats in feat_mapper.items()}  # {field_id, feature_id, feature}
+        field_dims = np.zeros(len(feat_mapper.items()))
+        for i, fm in feat_mapper.items():
+            field_dims[i] = len(fm)
+
+        return feat_mapper, item_num, item_field_num, position_num, max_item_col, max_cntx_col, field_dims 
+
+    def __build_cache(self, item_path, data_path, cache_path):
+        feature_mapper, item_num, item_field_num, pos_num, max_item_col, max_cntx_col, field_dims = self.__get_feature_mapper(item_path, data_path)
 
         with lmdb.open(cache_path, map_size=int(1e11)) as env:
-            i = 0
-            with open(item_path, 'r') as fi:
-                pbar = tqdm(fi, mininterval=1, smoothing=0.1)
-                pbar.set_description('Create position dataset cache: setup lmdb for item')
-                for line in pbar:
+            items = np.zeros((item_num, max_item_col, 2), dtype=np.float32)
+            with open(item_path, 'r') as f:
+                pbar = tqdm(f, mininterval=1, smoothing=0.1)
+                pbar.set_description('Setup lmdb for item')
+                for i, line in enumerate(pbar):
                     line = line.strip()
-                    item = np.zeros(self.max_item_num, dtype=np.int32)
-                    for _num, j in enumerate(line.split(' ')):
-                        item[_num] = int(j.split(':')[0])
-                    with env.begin(write=True) as txn:
-                        txn.put(b'item_%d'%i, item.tobytes())
-                        i += 1
-            item_num[0] = i
+                    for j, values in enumerate(line.split(' ')):
+                        field, feat, feat_value = values.split(':')
+                        items[i][j][0] = feature_mapper[int(field)][int(feat)]  # feat_idx
+                        items[i][j][1] = float(feat_value)  # feat_value
                 
-            for buf in self.__yield_buffer(data_path):
+            for buf in self.__yield_buffer(data_path, feature_mapper, item_field_num, pos_num, max_cntx_col):
                 with env.begin(write=True) as txn:
                     for item_key, item_array, ctx_key, ctx_array, max_dim_buf, pos_num[0] in buf:
                         txn.put(item_key, item_array)
                         txn.put(ctx_key, ctx_array)
-                        if  max_dim_buf > max_dim[0]:
-                            max_dim[0] = max_dim_buf
         
             with env.begin(write=True) as txn:
-                txn.put(b'max_dim', max_dim.tobytes())
-                txn.put(b'item_num', item_num.tobytes())
-                txn.put(b'pos_num', pos_num.tobytes())
-                txn.put(b'max_ctx_num', max_ctx_num.tobytes())
-                txn.put(b'max_item_num', max_item_num.tobytes())
+                txn.put(b'items', items.tobytes())
+                #txn.put(b'item_num', b'%d'%item_num)
+                txn.put(b'pos_num', b'%d'%pos_num)
+                txn.put(b'max_item_col', b'%d'%max_item_col)
+                txn.put(b'max_cntx_col', b'%d'%max_cntx_col)
+                txn.put(b'field_dims', field_dims.tobytes())
 
-    def __yield_buffer(self, data_path, buffer_size=int(1e5)):
-        sample_idx, max_dim, pos_num = 0, 0, 0
+    def __yield_buffer(self, data_path, feature_mapper, item_field_num, pos_num, max_cntx_col, buffer_size=int(1e5)):
+        sample_idx = 0
         buf = list()
         with open(data_path, 'r') as fd:
             pbar = tqdm(fd, mininterval=1, smoothing=0.1)
-            pbar.set_description('Create position dataset cache: setup lmdb for context')
+            pbar.set_description('Setup lmdb for context')
             for line in pbar:
                 line = line.strip()
                 labels, context = line.split(' ', 1)
-                labels = labels.strip().split(',')
-                pos_num = len(labels)
-                item_idx, item_value = zip(*[[int(j) for j in i.split(':')[:2]] for i in labels])
-                ctx_idx, ctx_value = zip(*[[float(j) for j in i.split(':')] for i in context.split(' ')])
+                item, click = zip(*[[int(j) for j in i.split(':')[:2]] for i in labels.strip().split(',')])
+                field, feat, feat_value = zip(*[[j for j in i.split(':')] for i in context.split(' ')])
+
                 item_array = np.zeros((2, pos_num), dtype=np.float32)
-                item_array[0, :] = item_idx
-                item_array[1, :] = item_value
-                ctx_array = np.zeros((2, self.max_ctx_num), dtype=np.float32)
-                ctx_array[0, :len(ctx_idx)] = ctx_idx
-                ctx_array[1, :len(ctx_value)] = ctx_value
-                tmp_max_dim = max(ctx_idx)
-                if tmp_max_dim > max_dim:
-                    max_dim = tmp_max_dim
-                buf.append((b'citem_%d'%sample_idx, item_array.tobytes(), b'ctx_%d'%sample_idx ,ctx_array.tobytes(), max_dim, pos_num))
+                item_array[0, :] = item
+                item_array[1, :] = click
+
+                ctx_array = np.zeros((2, max_cntx_col), dtype=np.float32)
+                ctx_array[0, :len(feat)] = [feature_mapper[i+'_cntx'] for i in feat]
+                ctx_array[1, :len(cntx_value)] = [float(i) for i in feat_value]
+
+                buf.append((b'citem_%d'%sample_idx, item_array.tobytes(), b'cntx_%d'%sample_idx ,ctx_array.tobytes()))
                 sample_idx += 1
                 if sample_idx % buffer_size == 0:
                     yield buf
@@ -127,7 +151,7 @@ class PositionDataset(Dataset):
             pos = int(idx%self.pos_num)
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%context_idx), dtype=np.float32)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%context_idx), dtype=np.float32)
+                ctx_array = np.frombuffer(txn.get(b'cntx_%d'%context_idx), dtype=np.float32)
                 #print(item_array.shape, ctx_array.shape)
                 item_idx = item_array[pos]
                 flag = item_array[self.pos_num + pos]

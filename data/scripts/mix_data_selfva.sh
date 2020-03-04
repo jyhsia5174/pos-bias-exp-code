@@ -12,7 +12,7 @@ ln -sf ${root}/item.* ./
 ln -sf ${root}/truth.svm ./
 
 num_trva=`wc -l select_trva.ffm | cut -d' ' -f1`
-num_tr=$(echo $num_trva 0.9 | awk '{ printf "%d\n" ,$1*$2}')
+num_tr=$(echo $num_trva 0.8 | awk '{ printf "%d\n" ,$1*$2}')
 
 for j in 'ffm' 'svm'
 do
