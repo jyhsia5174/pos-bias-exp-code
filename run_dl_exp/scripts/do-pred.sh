@@ -24,7 +24,7 @@ do
 		cmd="${cmd} --train_part trva"
 		cmd="${cmd} --valid_part ${va}" 
 		cmd="${cmd} --dataset_path ./"
-		cmd="${cmd} --flag test_auc"
+		cmd="${cmd} --flag test"
 		cmd="${cmd} --model_name ${model_name}"
 		cmd="${cmd} --model_path ${model_path}"
 		cmd="${cmd} --device cuda:${gpu}"
