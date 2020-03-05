@@ -33,7 +33,7 @@ set -e
 exp_dir=`basename ${data_path}`
 for i in 'det' 'random'
 do
-	cdir=${exp_dir}/derive.${i}
+	cdir=${exp_dir}/derive.${i}.${model_name}
 	mkdir -p ${cdir}
 	ln -sf ${root}/scripts/*.sh ${cdir}
 	ln -sf ${root}/scripts/*.py ${cdir}
@@ -45,14 +45,13 @@ do
 		ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
 	done
 	run_exp ${cdir} ${root} ${mode} ${model_name} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-	mv ${cdir} ${cdir}.${model_name}
 done
 exit 0
 for i in '.comb.' '.'
 do 
-	for k in 0.1 
+	for k in 0.01 
 	do 
-		cdir=${exp_dir}/der${i}${k}
+		cdir=${exp_dir}/der${i}${k}.${model_name}
 		mkdir -p ${cdir}
 		ln -sf ${root}/scripts/*.sh ${cdir}
 		ln -sf ${root}/scripts/*.py ${cdir}
@@ -64,7 +63,6 @@ do
 			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.svm ${cdir}/${j}.svm
 		done
 		run_exp ${cdir} ${root} ${mode} ${model_name} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-		mv ${cdir} ${cdir}.${model_name}
 	done
 done
 exit 0
