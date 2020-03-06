@@ -5,7 +5,7 @@ mode = sys.argv[2]
 
 f_path = os.path.join(root, "%s.record"%mode)
 va_num = [2] 
-te_num = list(range(10, 30, 9)) 
+#te_num = list(range(10, 30, 8)) 
 logloss = list()
 auc = list()
 with open(f_path, 'r') as f:
@@ -13,7 +13,7 @@ with open(f_path, 'r') as f:
         if i+1 in va_num:
             logloss.append(line.strip().split(' ')[-2])
             auc.append(line.strip().split(' ')[-1])
-        if line.startswith(('ext', 'bi')):
+        if line.startswith(('ffm', 'dcn', 'ext', 'bi')):
             logloss.append(line.strip().split(' ')[-2])
             auc.append(line.strip().split(' ')[-1])
 

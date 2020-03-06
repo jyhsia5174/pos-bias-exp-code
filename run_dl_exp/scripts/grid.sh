@@ -15,7 +15,7 @@ ds_path='./'
 
 # Fixed parameter
 flag='train'
-epoch=10
+epoch=15
 bs=4096
 
 # others
@@ -40,7 +40,7 @@ train_cmd="${train_cmd} --ps ${ps}"
 # Print out all parameter pair
 for lr in 0.001 #0.001 0.0001
 do
-    for wd in 1e-5 1e-6 1e-7
+    for wd in 16e-6 4e-6 1e-6 25e-8 625e-10
     do
         for k in 32 
         do

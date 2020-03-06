@@ -175,8 +175,8 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)

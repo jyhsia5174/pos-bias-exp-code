@@ -87,9 +87,10 @@ class PositionDataset(Dataset):
 
     def __build_cache(self, item_path, data_path, cache_path):
         feature_mapper, item_num, item_field_num, pos_num, max_item_col, max_cntx_col, field_dims = self.__get_feature_mapper(item_path, data_path)
+        field_offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
 
         with lmdb.open(cache_path, map_size=int(1e11)) as env:
-            items = np.zeros((item_num, max_item_col, 2), dtype=np.float32)
+            items = np.zeros((item_num, max_item_col, 3), dtype=np.float32)
             with open(item_path, 'r') as f:
                 pbar = tqdm(f, mininterval=1, smoothing=0.1)
                 pbar.set_description('Setup lmdb for item')
@@ -97,8 +98,9 @@ class PositionDataset(Dataset):
                     line = line.strip()
                     for j, values in enumerate(line.split(' ')):
                         field, feat, feat_value = values.split(':')
-                        items[i][j][0] = feature_mapper[int(field)][int(feat)]  # feat_idx
+                        items[i][j][0] = int(feat) + 1 + field_offsets[int(field)] # feat_idx
                         items[i][j][1] = float(feat_value)  # feat_value
+                        items[i][j][2] = int(field)  # feat_value
                 
             for buf in self.__yield_buffer(data_path, feature_mapper, item_field_num, pos_num, max_cntx_col):
                 with env.begin(write=True) as txn:
