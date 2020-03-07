@@ -29,7 +29,7 @@ cd ${root}
 # generate 99%S_c + 1%S_t and 90%S_c + 10%S_t 
 for i in '.comb.' '.'
 do 
-	for j in 0.1
+	for j in 0.01 0.1
 	do 
 		cdir=${data_path}/der${i}${j}
 		mkdir -p ${cdir} 
@@ -44,7 +44,7 @@ done
 # generate imp data for 99%S_c + 1%S_t and 90%S_c + 10%S_t 
 for i in '.comb.' 
 do 
-	for j in 0.1
+	for j in 0.01 0.1
 	do 
 		cdir=${data_path}/der${i}${j}.imp
 		mkdir -p ${cdir} 

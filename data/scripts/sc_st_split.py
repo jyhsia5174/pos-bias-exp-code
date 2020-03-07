@@ -31,7 +31,7 @@ def process_helper(fin_path):
 
     return
 
-origins = [os.path.join(SRC, 'random_trva.ffm'), os.path.join(SRC, 'random_tr.ffm')]
+origins = [os.path.join(SRC, 'random_trva.ffm'), os.path.join(SRC, 'random_tr.ffm'), os.path.join(SRC, 'random_trva.svm'), os.path.join(SRC, 'random_tr.svm')]
 for o in origins:
     process_helper(o)
 

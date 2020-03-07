@@ -10,6 +10,9 @@ python sc_st_split.py $1 $2
 #tr_num=`wc -l select_st_tr.ffm`
 #va_num=$(($trva_num-$tr_num))
 #tail -n ${va_num} select_st_trva.ffm > select_va.ffm
-ln -sf ../der.${rnd_ratio}/select_va.ffm ./
-ln -sf ${root}/*gt*ffm ./
-ln -sf ${root}/item.ffm ./
+for i in 'ffm' 'svm'
+do
+	ln -sf ../der.${rnd_ratio}/select_va.${i} ./
+	ln -sf ${root}/*gt*${i} ./
+	ln -sf ${root}/item.${i} ./
+done
