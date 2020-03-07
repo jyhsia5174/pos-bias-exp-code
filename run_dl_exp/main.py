@@ -26,6 +26,45 @@ from src.model.dcn import DeepCrossNetworkModel
 from utility import recommend
 
 
+class data_prefetcher():
+    def __init__(self, loader, device):
+        self.device = device
+        self.loader = iter(loader)
+        self.stream = torch.cuda.Stream()
+        self.preload()
+
+    #@profile
+    def preload(self):
+        try:
+            #self.next_input, self.next_target = next(self.loader)
+            self.context, self.item, self.target, self.pos, _, self.value = next(self.loader)
+        except StopIteration:
+            #self.next_input = None
+            #self.next_target = None
+            self.context, self.item, self.target, self.pos, self.value = None, None, None, None, None
+            return
+        with torch.cuda.stream(self.stream):
+            #self.next_input = self.next_input.cuda(non_blocking=True)
+            #self.next_target = self.next_target.cuda(non_blocking=True)
+            self.context = self.context.cuda(device=self.device, non_blocking=True) 
+            self.item = self.item.cuda(device=self.device, non_blocking=True)
+            self.target = self.target.cuda(device=self.device, non_blocking=True) 
+            self.pos = self.pos.cuda(device=self.device, non_blocking=True) 
+            self.value = self.value.cuda(device=self.device, non_blocking=True) 
+            
+    def next(self):
+        torch.cuda.current_stream().wait_stream(self.stream)
+        #input = self.next_input
+        #target = self.next_target
+        context = self.context 
+        item = self.item
+        target = self.target 
+        pos = self.pos 
+        value = self.value 
+        self.preload()
+        #return input, target
+        return context, item, target, pos, None, value
+
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -82,12 +121,13 @@ def get_model(name, dataset, embed_dim):
     else:
         raise ValueError('unknown model name: ' + name)
 
-
+#@profile
 def model_helper(data_pack, model, model_name, device, mode='wps'):
     context, item, target, pos, _, value = data_pack
-    context, item, target, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), value.to(device, torch.float)
+    #context, item, target, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), value.to(device, torch.float)
+    #context, item, target, value = context.to(device, non_blocking=True), item.to(device, non_blocking=True), target.to(device, non_blocking=True), value.to(device, non_blocking=True)
     if model_name.startswith(('bi', 'ext')):
-        pos = pos.to(device, torch.long)
+        #pos = pos.to(device, torch.long)
         if mode == 'wops':
             pos = torch.zeros_like(pos)
         elif mode == 'wps':
@@ -99,12 +139,19 @@ def model_helper(data_pack, model, model_name, device, mode='wps'):
         y = model(context, item, value)
     return y, target
 
+#@profile
 def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=1000):
     model.train()
     total_loss = 0
-    pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
-    for i, tmp in enumerate(pbar):
-        y, target = model_helper(tmp, model, model_name, device, 'wps')
+    #pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
+    #for i, tmp in enumerate(pbar):
+    #    y, target = model_helper(tmp, model, model_name, device, 'wps')
+    prefetcher = data_prefetcher(data_loader, device)
+    pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
+    data_pack = prefetcher.next()
+    i = 0
+    while data_pack[0] is not None:
+        y, target = model_helper(data_pack, model, model_name, device, 'wps')
         loss = criterion(y, target.float())
         model.zero_grad()
         loss.backward()
@@ -114,16 +161,65 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
             closs = total_loss/log_interval
             pbar.set_postfix(loss=closs)
             total_loss = 0
+        data_pack = prefetcher.next()
+        i += 1
+        pbar.update(1)
+    pbar.close()
+    return loss.item()
+
+def imp_train(model, imp_model, optimizer, data_loader, imp_data_loader, criterion, criterion_imp, device, model_name, log_interval=1000):
+    model.train()
+    imp_model.eval()
+    total_loss = 0
+    #pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
+    #for i, tmp in enumerate(pbar):
+    #    y, target = model_helper(tmp, model, model_name, device, 'wps')
+    imp_data_loader_iter = iter(imp_data_loader)
+    prefetcher = data_prefetcher(data_loader, device)
+    pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
+    data_pack = prefetcher.next()
+    i = 0
+    while data_pack[0] is not None:
+        try:
+            imp_data_pack = next(imp_data_loader_iter)
+        except StopIteration:
+            imp_data_loader_iter = iter(imp_data_loader)
+            imp_data_pack = next(imp_data_loader_iter)
+        y, target = model_helper(data_pack, model, model_name, device, 'wps')
+        imp_y, _ = model_helper(imp_data_pack, imp_model, model_name, device, 'wps')
+        hat_y, _ = model_helper(imp_data_pack, model, model_name, device, 'wps')
+        loss = criterion(y, target.float()) + imp_criterion(hat_y, imp_y)
+        model.zero_grad()
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+        if (i + 1) % log_interval == 0:
+            closs = total_loss/log_interval
+            pbar.set_postfix(loss=closs)
+            total_loss = 0
+        data_pack = prefetcher.next()
+        i += 1
+        pbar.update(1)
+    pbar.close()
     return loss.item()
 
 def test(model, data_loader, device, model_name, mode='wps'):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
-        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device, mode)
+    #    for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
+    #        y, target = model_helper(tmp, model, model_name, device, mode)
+        prefetcher = data_prefetcher(data_loader, device)
+        pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
+        data_pack = prefetcher.next()
+        i = 0
+        while data_pack[0] is not None:
+            y, target = model_helper(data_pack, model, model_name, device, 'wps')
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
+            data_pack = prefetcher.next()
+            i += 1
+            pbar.update(1)
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 
@@ -162,6 +258,7 @@ def main(dataset_name,
          flag,
          model_name,
          model_path,
+         imp_model_path,
          epoch,
          learning_rate,
          batch_size,
@@ -175,8 +272,8 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=7, pin_memory=True, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=7, pin_memory=True)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -184,6 +281,29 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
+                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
+                print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
+                log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
+        torch.save(model, f'{save_dir}/{model_file_name}.pt')
+    elif flag == 'imp_train':
+        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
+        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, True)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
+
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
+        imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+
+        model = get_model(model_name, train_dataset, embed_dim).to(device)
+        imp_model = torch.load(imp_model_path).to(device)
+
+        criterion = torch.nn.BCELoss()
+        imp_criterion = torch.nn.MSELoss()  
+        optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
+        with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
+            for epoch_i in range(epoch):
+                tr_logloss = imp_train(imp_model, optimizer, train_data_loader, imp_train_data_loader, criterion, imp_criterion, device, model_name)
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
@@ -205,7 +325,7 @@ def main(dataset_name,
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     else:
-        raise ValueError('Flag should be "train"/"pred"/"test"!')
+        raise ValueError('Flag should be "train"/"imp_train"/"pred"/"test"!')
 
 
 
@@ -220,6 +340,7 @@ if __name__ == '__main__':
     parser.add_argument('--flag', default='train')
     parser.add_argument('--model_name', default='dssm')
     parser.add_argument('--model_path', default='', help='the path of model file')
+    parser.add_argument('--imp_model_path', default='', help='the path of imp model file')
     parser.add_argument('--epoch', type=float, default=30.)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=float, default=8192.)
@@ -236,6 +357,7 @@ if __name__ == '__main__':
          args.flag,
          args.model_name,
          args.model_path,
+         args.imp_model_path,
          int(args.epoch),
          args.learning_rate,
          int(args.batch_size),

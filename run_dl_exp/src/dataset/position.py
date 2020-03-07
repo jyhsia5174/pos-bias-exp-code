@@ -34,10 +34,11 @@ class PositionDataset(Dataset):
         with self.env.begin(write=False) as txn:
             self.max_dim = np.frombuffer(txn.get(b'max_dim'), dtype=np.int32)[0] + 1  # idx from 0 to max_dim_in_svmfile, 0 for padding
             self.item_num = np.frombuffer(txn.get(b'item_num'), dtype=np.int32)[0]
+            self.items=np.frombuffer(txn.get(b'items'), dtype=np.int32).reshape((self.item_num, -1)).astype(np.long)
             self.pos_num = np.frombuffer(txn.get(b'pos_num'), dtype=np.int32)[0]
             self.max_ctx_num = np.frombuffer(txn.get(b'max_ctx_num'), dtype=np.int32)[0]
             self.max_item_num = np.frombuffer(txn.get(b'max_item_num'), dtype=np.int32)[0]
-            self.length = self.pos_num*(txn.stat()['entries'] - self.item_num - 5)//2 if not self.test_flag else self.item_num*(txn.stat()['entries'] - self.item_num - 5)//2
+            self.length = self.pos_num*(txn.stat()['entries'] - 6)//2 if not self.test_flag else self.item_num*(txn.stat()['entries'] - 6)//2
             print('Totally %d items, %d dims, %d positions, %d samples'%(self.item_num, self.max_dim, self.pos_num, self.length))
     
     def __build_cache(self, data_path, item_path, cache_path):
@@ -60,17 +61,17 @@ class PositionDataset(Dataset):
 
         with lmdb.open(cache_path, map_size=int(1e11)) as env:
             i = 0
+            items = np.zeros((300, self.max_item_num), dtype=np.int32)
             with open(item_path, 'r') as fi:
                 pbar = tqdm(fi, mininterval=1, smoothing=0.1)
                 pbar.set_description('Create position dataset cache: setup lmdb for item')
                 for line in pbar:
                     line = line.strip()
-                    item = np.zeros(self.max_item_num, dtype=np.int32)
                     for _num, j in enumerate(line.split(' ')):
-                        item[_num] = int(j.split(':')[0])
-                    with env.begin(write=True) as txn:
-                        txn.put(b'item_%d'%i, item.tobytes())
-                        i += 1
+                        items[i, _num] = int(j.split(':')[0])
+                    i += 1
+            items = items[:i, :]
+            #print(items.shape)
             item_num[0] = i
                 
             for buf in self.__yield_buffer(data_path):
@@ -82,6 +83,7 @@ class PositionDataset(Dataset):
                             max_dim[0] = max_dim_buf
         
             with env.begin(write=True) as txn:
+                txn.put(b'items', items.tobytes())
                 txn.put(b'max_dim', max_dim.tobytes())
                 txn.put(b'item_num', item_num.tobytes())
                 txn.put(b'pos_num', pos_num.tobytes())
@@ -123,28 +125,27 @@ class PositionDataset(Dataset):
     #@profile
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
         if not self.test_flag:
-            context_idx = idx//self.pos_num
-            pos = int(idx%self.pos_num)
+            context_idx, pos = divmod(idx, self.pos_num)
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%context_idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%context_idx), dtype=np.float32)
                 #print(item_array.shape, ctx_array.shape)
                 item_idx = item_array[pos]
                 flag = item_array[self.pos_num + pos]
-                item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                ctx_idx = ctx_array[:self.max_ctx_num].copy()  # context
+                item = self.items[int(item_idx), :]
+                ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             pos += 1
         else:
-            context_idx = int(idx)//self.item_num
-            item_idx = int(idx)%self.item_num 
+            context_idx, _ = divmod(idx, self.item_num)
             pos = 0
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%context_idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%context_idx), dtype=np.float32)
                 flag = -1
-                item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                ctx_idx = ctx_array[:self.max_ctx_num].copy()  # context
+                #item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
+                item = self.items[int(item_idx), :]
+                ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
         if self.tr_max_dim > 0:
             ctx_idx[ctx_idx > self.tr_max_dim] = 0
@@ -186,7 +187,7 @@ if __name__ == '__main__':
             context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
             #print(context[30:32], item[30:32], target[30:32], pos[30:32], value[30:32])
             print(context.size(), item.size(), target.size(), pos.size(), value.size())
-            break
+            if i > 100: break
             #print(idx, data, label, pos)
 
     dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=True, tr_max_dim=-1, test_flag=False)

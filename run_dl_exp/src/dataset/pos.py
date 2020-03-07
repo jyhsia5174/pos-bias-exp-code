@@ -54,13 +54,13 @@ class PositionDataset(Dataset):
             pbar = tqdm(f, mininterval=1, smoothing=0.1)
             pbar.set_description('Counting item features')
             for line in pbar:
-                values = line.strip().split(' ')
+                feats = line.strip().split(' ')
                 item_num += 1
-                max_item_col = max(max_item_col, len(values))
-                for data in values:
-                    field, feat, feat_value = data.split(':')
+                max_item_col = max(max_item_col, len(feats))
+                for feat in feats:
+                    field_idx, feat_idx, feat_value = feat.split(':')
                     #field += '_item'
-                    feat_cnts[int(field)][int(feat)] += 1
+                    feat_cnts[int(field_idx)][int(feat_idx)] += 1
         item_field_num = len(feat_cnts.items())
 
         with open(data_path) as f:
@@ -69,40 +69,44 @@ class PositionDataset(Dataset):
             for line in pbar:
                 labels, values = line.strip().split(' ', 1)
                 labels = labels.split(',')
-                values = values.split(' ')
+                feats = feats.split(' ')
                 position_num = max(position, len(labels))
-                max_cntx_col = max(max_cntx_col, len(values))
-                for data in values:
-                    field, feat, feat_value = data.split(':')
+                max_cntx_col = max(max_cntx_col, len(feats))
+                for feat in feats:
+                    field_idx, feat_idx, feat_value = feat.split(':')
                     #field += '_cntx'
-                    feat_cnts[int(field)+item_field_num][int(feat)] += 1
+                    feat_cnts[int(field_idx)+item_field_num][int(feat_idx)] += 1
 
         feat_mapper = {field: {feat for feat, c in cnt.items() if c >= self.min_threshold} for field, cnt in feat_cnts.items()}  # {field_id, feature_set} 
         #feat_mapper = {field: {feat: idx for idx, feat in enumerate(feats)} for field, feats in feat_mapper.items()}  # {field_id, feature_id, feature}
-        field_dims = np.zeros(len(feat_mapper.items()))
-        for i, fm in feat_mapper.items():
-            field_dims[i] = len(fm)
+        #field_dims = np.zeros(len(feat_mapper.items()))
+        field_offsets = defaultdict(int)
+        tmp = 0
+        for field, feat in feat_mapper.items():
+            field_offsets[field] = tmp
+            tmp += len(feat)
 
-        return feat_mapper, item_num, item_field_num, position_num, max_item_col, max_cntx_col, field_dims 
+        return feat_mapper, item_num, item_field_num, position_num, max_item_col, max_cntx_col, field_offsets 
 
     def __build_cache(self, item_path, data_path, cache_path):
-        feature_mapper, item_num, item_field_num, pos_num, max_item_col, max_cntx_col, field_dims = self.__get_feature_mapper(item_path, data_path)
-        field_offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
+        feature_mapper, item_num, item_field_num, pos_num, max_item_col, max_cntx_col, field_offsets = self.__get_feature_mapper(item_path, data_path)
+        #field_offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
 
         with lmdb.open(cache_path, map_size=int(1e11)) as env:
-            items = np.zeros((item_num, max_item_col, 3), dtype=np.float32)
+            items = np.zeros((item_num, 3, max_item_col), dtype=np.float32)
             with open(item_path, 'r') as f:
                 pbar = tqdm(f, mininterval=1, smoothing=0.1)
                 pbar.set_description('Setup lmdb for item')
                 for i, line in enumerate(pbar):
                     line = line.strip()
-                    for j, values in enumerate(line.split(' ')):
-                        field, feat, feat_value = values.split(':')
-                        items[i][j][0] = int(feat) + 1 + field_offsets[int(field)] # feat_idx
-                        items[i][j][1] = float(feat_value)  # feat_value
-                        items[i][j][2] = int(field)  # feat_value
+                    feats = sorted(line.split(' '), key=lambda x:x.split(':')[0])
+                    for j, feat in enumerate(feats):
+                        field_idx, feat_idx, feat_value = feat.split(':')
+                        items[i][0][j] = int(feat_idx) + 1 + field_offsets[int(field_idx)] # feat_idx
+                        items[i][1][j] = float(feat_value)  # feat_value
+                        items[i][2][j] = int(field_idx)  # feat_value
                 
-            for buf in self.__yield_buffer(data_path, feature_mapper, item_field_num, pos_num, max_cntx_col):
+            for buf in self.__yield_buffer(data_path, items, feature_mapper, item_field_num, pos_num, max_item_col, max_cntx_col):
                 with env.begin(write=True) as txn:
                     for item_key, item_array, ctx_key, ctx_array, max_dim_buf, pos_num[0] in buf:
                         txn.put(item_key, item_array)
@@ -116,7 +120,7 @@ class PositionDataset(Dataset):
                 txn.put(b'max_cntx_col', b'%d'%max_cntx_col)
                 txn.put(b'field_dims', field_dims.tobytes())
 
-    def __yield_buffer(self, data_path, feature_mapper, item_field_num, pos_num, max_cntx_col, buffer_size=int(1e5)):
+    def __yield_buffer(self, data_path, items, feature_mapper, item_field_num, pos_num, max_item_col, max_cntx_col, buffer_size=int(5e5)):
         sample_idx = 0
         buf = list()
         with open(data_path, 'r') as fd:
@@ -124,9 +128,24 @@ class PositionDataset(Dataset):
             pbar.set_description('Setup lmdb for context')
             for line in pbar:
                 line = line.strip()
-                labels, context = line.split(' ', 1)
-                item, click = zip(*[[int(j) for j in i.split(':')[:2]] for i in labels.strip().split(',')])
-                field, feat, feat_value = zip(*[[j for j in i.split(':')] for i in context.split(' ')])
+                labels, feats = line.split(' ', 1)
+                feat_array = np.zeros((3, max_item_col+max_cntx_col))
+                feats = sorted(feats.split(' '), key=lambda x: x.split(':')[0])
+                feats_num = len(feats)
+                for i, feat in enumerate(feats):
+                    field_idx, feat_idx, feat_value = feat.split(':')
+                    feat_array[0, i] = int(feat_idx) + 1 + field_offsets[int(field_idx)+item_field_num]
+                    feat_array[1, i] = float(feat_value)
+                    feat_array[2, i] = int(field_idx) + item_field_num
+                
+                #item, click = zip(*[[int(j) for j in i.split(':')[:2]] for i in labels.strip().split(',')])
+                #field, feat, feat_value = zip(*[[j for j in i.split(':')] for i in context.split(' ')])
+                for i, label in enumerate(labels.strip().split(',')):
+                    item, click, _ = label.split(':')
+                    for j in items[int(item), :]:
+                        feat_array[0, i] =  
+                        feat_array[1, i] = float(feat_value)
+                        feat_array[2, i] = int(field_idx) + item_field_num
 
                 item_array = np.zeros((2, pos_num), dtype=np.float32)
                 item_array[0, :] = item
