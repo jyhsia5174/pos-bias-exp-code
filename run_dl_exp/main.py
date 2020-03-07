@@ -207,8 +207,8 @@ def test(model, data_loader, device, model_name, mode='wps'):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
-    #    for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-    #        y, target = model_helper(tmp, model, model_name, device, mode)
+        #    for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
+        #        y, target = model_helper(tmp, model, model_name, device, mode)
         prefetcher = data_prefetcher(data_loader, device)
         pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
         data_pack = prefetcher.next()
@@ -220,6 +220,7 @@ def test(model, data_loader, device, model_name, mode='wps'):
             data_pack = prefetcher.next()
             i += 1
             pbar.update(1)
+    #print("Evaluate on %d samples"%len(targets))
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 
@@ -269,6 +270,7 @@ def main(dataset_name,
          ps):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
+    #torch.cuda.device(device)
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)

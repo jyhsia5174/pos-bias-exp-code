@@ -15,7 +15,7 @@ ds_path='./'
 
 # Fixed parameter
 flag='train'
-epoch=15
+epoch=25
 bs=4096
 
 # others

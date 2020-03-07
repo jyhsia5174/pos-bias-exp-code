@@ -132,7 +132,7 @@ class PositionDataset(Dataset):
                 #print(item_array.shape, ctx_array.shape)
                 item_idx = item_array[pos]
                 flag = item_array[self.pos_num + pos]
-                item = self.items[int(item_idx), :]
+                item = self.items[int(item_idx), :].astype(np.long)
                 ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             pos += 1
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     def main(dataset):
         device='cuda:0'
         #data_loader = DataLoader(dataset, batch_size=4096, num_workers=0, collate_fn=collate_fn_for_dssm, shuffle=True)
-        data_loader = DataLoader(dataset, batch_size=4096, num_workers=0,)# shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=10, num_workers=0,)# shuffle=True)
     
         pbar = tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
         for i, data_pack in enumerate(pbar):
@@ -187,9 +187,10 @@ if __name__ == '__main__':
             context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
             #print(context[30:32], item[30:32], target[30:32], pos[30:32], value[30:32])
             print(context.size(), item.size(), target.size(), pos.size(), value.size())
-            if i > 100: break
+            print(context, item, target, pos, value)
+            if i > 0: break
             #print(idx, data, label, pos)
 
-    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=True, tr_max_dim=-1, test_flag=False)
+    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, test_flag=False)
     #dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, test_flag=False)
     main(dataset)

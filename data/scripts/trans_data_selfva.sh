@@ -17,7 +17,7 @@ ln -sf ${root}/item.* ./
 num_trva=`wc -l random.ffm | cut -d' ' -f1`
 #num_te=`wc -l truth.svm | cut -d' ' -f1`
 #num_tr=$((${num_trva} - ${num_te}))
-num_tr=$(echo $num_trva 0.8 | awk '{ printf "%d\n" ,$1*$2}')
+num_tr=$(echo $num_trva 0.9 | awk '{ printf "%d\n" ,$1*$2}')
 num_item=`wc -l item.ffm | cut -d' ' -f1`
 
 for i in 'det' 'random'

@@ -1,6 +1,7 @@
 import os, sys
 import numpy as np
 import shutil
+from multiprocessing import Pool
 
 SRC = sys.argv[1]
 PORTION = float(sys.argv[2])
@@ -32,6 +33,10 @@ def process_helper(fin_path):
     return
 
 origins = [os.path.join(SRC, 'random_trva.ffm'), os.path.join(SRC, 'random_tr.ffm'), os.path.join(SRC, 'random_trva.svm'), os.path.join(SRC, 'random_tr.svm')]
-for o in origins:
-    process_helper(o)
+try:
+    p = Pool(8)
+    p.map(process_helper, origins)
+except:
+    for o in origins:
+        process_helper(o)
 
