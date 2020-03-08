@@ -31,11 +31,12 @@ ds_path='./'
 
 # Fixed parameter
 flag='imp_train'
-lr=`python select_params.py logs ${mode} | cut -d' ' -f1`
-wd=`python select_params.py logs ${mode} | cut -d' ' -f2`
-bs=`python select_params.py logs ${mode} | cut -d' ' -f3` 
-k=`python select_params.py logs ${mode} | cut -d' ' -f4`
-epoch=`python select_params.py logs ${mode} | cut -d' ' -f5`
+lr=`python select_params_imp.py logs ${mode} | cut -d' ' -f1`
+wd=`python select_params_imp.py logs ${mode} | cut -d' ' -f2`
+bs=`python select_params_imp.py logs ${mode} | cut -d' ' -f3` 
+k=`python select_params_imp.py logs ${mode} | cut -d' ' -f4`
+omega=`python select_params_imp.py logs ${mode} | cut -d' ' -f5`
+epoch=`python select_params_imp.py logs ${mode} | cut -d' ' -f6`
 epoch=$((${epoch}+1))
 
 # others 
@@ -89,6 +90,7 @@ cmd="${cmd} --ps ${ps}"
 cmd="${cmd} --learning_rate ${lr}"
 cmd="${cmd} --weight_decay ${wd}"
 cmd="${cmd} --embed_dim ${k}"
+cmd="${cmd} --omega ${omega}"
 echo "${cmd}"
 }
 

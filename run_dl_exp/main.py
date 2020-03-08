@@ -315,7 +315,7 @@ def main(dataset_name,
         criterion = torch.nn.BCEWithLogitsLoss()
         imp_criterion = torch.nn.MSELoss()  
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
+        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), 'o-'+str(omega), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = imp_train(omega, model, imp_model, optimizer, train_data_loader, imp_train_data_loader, criterion, imp_criterion, device, model_name)

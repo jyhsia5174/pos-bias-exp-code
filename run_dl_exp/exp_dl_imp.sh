@@ -24,7 +24,7 @@ run_exp(){
 	cmd="${cmd}; ./do-test_imp.sh ${gpu} ${mode} ${model_name} ${ps} ${imp_dir}"
 	cmd="${cmd}; ./do-pred_imp.sh ${gpu} ${mode} ${ps}"
 	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
-	cmd="${cmd}; python select_params.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> ${mode}.record" # va logloss, auc
+	cmd="${cmd}; python select_params_imp.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> ${mode}.record" # va logloss, auc
 	cmd="${cmd}; head -n10 test-score.${mode}/rnd*log >> ${mode}.record" # va logloss, auc
 	cmd="${cmd}; cd ${rdir}"
 	echo ${cmd}
@@ -40,7 +40,7 @@ do
 		cdir=${exp_dir}/der${i}${k}.imp.${model_name}
 		mkdir -p ${cdir}
 		ln -sf ${root}/scripts/*_imp.sh ${cdir}
-		ln -sf ${root}/scripts/*.py ${cdir}
+		ln -sf ${root}/scripts/*_imp.py ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/*gt*svm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/item.svm ${cdir}
 		#ln -sf ${root}/${data_path}/der${i}${k}.imp/truth.svm ${cdir}
