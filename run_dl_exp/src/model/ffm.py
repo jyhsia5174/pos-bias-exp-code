@@ -18,7 +18,8 @@ class FFM(torch.nn.Module):
         x2 = torch.sum(self.embed1(x2), dim=1)  # field 1 embedding for item: (batch_size, item_nonzero_feature_num, embed_dim)
 
         ## merge
-        x12 = torch.sigmoid(torch.sum(x1*x2, dim=1))  # (batch_size,)
+        #x12 = torch.sigmoid(torch.sum(x1*x2, dim=1))  # (batch_size,)
+        x12 = torch.sum(x1*x2, dim=1)  # (batch_size,)
         #x3 = torch.sum(self.embed2(x3), dim = 1)  # (batch_size,)
         #x3 = torch.sigmoid(x3).squeeze(1) 
         #out = x12*x3  # ffm_prob*pos_prob

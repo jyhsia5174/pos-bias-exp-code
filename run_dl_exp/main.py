@@ -167,37 +167,48 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     pbar.close()
     return loss.item()
 
-def imp_train(model, imp_model, optimizer, data_loader, imp_data_loader, criterion, criterion_imp, device, model_name, log_interval=1000):
+def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, criterion, imp_criterion, device, model_name, log_interval=1000):
     model.train()
     imp_model.eval()
     total_loss = 0
     #pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
     #for i, tmp in enumerate(pbar):
     #    y, target = model_helper(tmp, model, model_name, device, 'wps')
-    imp_data_loader_iter = iter(imp_data_loader)
     prefetcher = data_prefetcher(data_loader, device)
-    pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
+    imp_prefetcher = data_prefetcher(imp_data_loader, device)
     data_pack = prefetcher.next()
+    imp_data_pack = imp_prefetcher.next()
+    pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
     i = 0
+    closs=np.nan
     while data_pack[0] is not None:
-        try:
-            imp_data_pack = next(imp_data_loader_iter)
-        except StopIteration:
-            imp_data_loader_iter = iter(imp_data_loader)
-            imp_data_pack = next(imp_data_loader_iter)
+        #try:
+        #    imp_data_pack = next(imp_data_loader_iter)
+        #except StopIteration:
+        #    imp_data_loader_iter = iter(imp_data_loader)
+        #    imp_data_pack = next(imp_data_loader_iter)
         y, target = model_helper(data_pack, model, model_name, device, 'wps')
         imp_y, _ = model_helper(imp_data_pack, imp_model, model_name, device, 'wps')
         hat_y, _ = model_helper(imp_data_pack, model, model_name, device, 'wps')
-        loss = criterion(y, target.float()) + imp_criterion(hat_y, imp_y)
+
+        loss1 = criterion(y, target.float())
+        loss2 = imp_criterion(hat_y, imp_y)
+        loss = loss1 + omega*loss2
+        pbar.set_postfix(nll='%.4f'%loss1.item(), mse='%.4f'%loss2.item(), loss='%.4f'%loss.item(),closs='%.4f'%closs)
+
         model.zero_grad()
         loss.backward()
         optimizer.step()
+
         total_loss += loss.item()
         if (i + 1) % log_interval == 0:
             closs = total_loss/log_interval
-            pbar.set_postfix(loss=closs)
+            pbar.set_postfix(nll='%.4f'%loss1.item(), mse='%.4f'%loss2.item(), loss='%.4f'%loss.item(),closs='%.4f'%closs)
+            #pbar.set_postfix(loss=closs)
             total_loss = 0
+
         data_pack = prefetcher.next()
+        imp_data_pack = imp_prefetcher.next()
         i += 1
         pbar.update(1)
     pbar.close()
@@ -216,7 +227,7 @@ def test(model, data_loader, device, model_name, mode='wps'):
         while data_pack[0] is not None:
             y, target = model_helper(data_pack, model, model_name, device, 'wps')
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
-            predicts.extend(torch.flatten(y).tolist())
+            predicts.extend(torch.sigmoid(torch.flatten(y)).tolist())
             data_pack = prefetcher.next()
             i += 1
             pbar.update(1)
@@ -265,6 +276,7 @@ def main(dataset_name,
          batch_size,
          embed_dim,
          weight_decay,
+         omega,
          device,
          save_dir,
          ps):
@@ -274,10 +286,10 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=7, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=7, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
-        criterion = torch.nn.BCELoss()
+        criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
@@ -288,24 +300,25 @@ def main(dataset_name,
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
     elif flag == 'imp_train':
-        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
-        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, True)
-        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
+        st_dataset = get_dataset(dataset_name, dataset_path, 'st_tr', False)
+        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
+        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, True)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
 
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
-        imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
+        imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
 
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         imp_model = torch.load(imp_model_path).to(device)
 
-        criterion = torch.nn.BCELoss()
+        criterion = torch.nn.BCEWithLogitsLoss()
         imp_criterion = torch.nn.MSELoss()  
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
-                tr_logloss = imp_train(imp_model, optimizer, train_data_loader, imp_train_data_loader, criterion, imp_criterion, device, model_name)
+                tr_logloss = imp_train(omega, model, imp_model, optimizer, train_data_loader, imp_train_data_loader, criterion, imp_criterion, device, model_name)
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
@@ -348,6 +361,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=float, default=8192.)
     parser.add_argument('--embed_dim', type=float, default=16.)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
+    parser.add_argument('--omega', type=float, default=1)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
     parser.add_argument('--ps', default='wps')
@@ -365,6 +379,7 @@ if __name__ == '__main__':
          int(args.batch_size),
          int(args.embed_dim),
          args.weight_decay,
+         args.omega,
          args.device,
          args.save_dir,
          args.ps)

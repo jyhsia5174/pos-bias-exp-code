@@ -32,7 +32,7 @@ ds_path='./'
 
 # Fixed parameter
 flag='imp_train'
-epoch=15
+epoch=25
 bs=4096
 
 # others
@@ -62,7 +62,7 @@ echo "${cmd}"
 # Run
 echo "Train imp model"
 imp_task
-imp_task #| xargs -0 -d '\n' -P 1 -I {} sh -c {}
+imp_task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
 
 imp_model_path=`find ./imp_log_tr -name "*.pt"`
 imp_model_name=`echo $(basename ${imp_model_path}) | cut -d'_' -f1`
@@ -85,18 +85,16 @@ train_cmd="${train_cmd} --batch_size ${bs}"
 train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
-for lr in 0.001 #0.001 0.0001
+lr=${imp_lr}
+wd=${imp_wd}
+k=${imp_k}
+for o in 16 4 1 0.25 0.0625
 do
-    for wd in 16e-6 4e-6 1e-6 25e-8 625e-10
-    do
-        for k in 32 
-        do
-            cmd="${train_cmd} --learning_rate ${lr}"
-            cmd="${cmd} --weight_decay ${wd}"
-            cmd="${cmd} --embed_dim ${k}"
-            echo "${cmd}"
-        done
-    done
+	cmd="${train_cmd} --learning_rate ${lr}"
+    cmd="${cmd} --weight_decay ${wd}"
+    cmd="${cmd} --embed_dim ${k}"
+    cmd="${cmd} --omega ${o}"
+    echo "${cmd}"
 done
 }
 
@@ -104,9 +102,9 @@ done
 # Check command
 echo "Check command list (the command may not be runned!!)"
 task
-#wait
+wait
 
 
 # Run
-#echo "Run"
-#task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
+echo "Run"
+task | xargs -0 -d '\n' -P 1 -I {} sh -c {}

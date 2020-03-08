@@ -35,7 +35,7 @@ exp_dir=`basename ${data_path}`
 
 for i in '.comb.'
 do 
-	for k in 0.01 0.1
+	for k in 0.1 #0.01
 	do 
 		cdir=${exp_dir}/der${i}${k}.imp.${model_name}
 		mkdir -p ${cdir}
