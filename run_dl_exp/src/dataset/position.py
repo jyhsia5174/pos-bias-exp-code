@@ -137,14 +137,14 @@ class PositionDataset(Dataset):
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             pos += 1
         else:
-            context_idx, _ = divmod(idx, self.item_num)
+            context_idx, item_idx = divmod(idx, self.item_num)
             pos = 0
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%context_idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%context_idx), dtype=np.float32)
                 flag = -1
                 #item = np.frombuffer(txn.get(b'item_%d'%item_idx), dtype=np.int32)
-                item = self.items[int(item_idx), :]
+                item = self.items[int(item_idx), :].astype(np.long)
                 ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
         if self.tr_max_dim > 0:
