@@ -28,6 +28,7 @@ fi
 ds='pos'
 tr_part='sc_tr'
 va_part='va'
+imp_part='st_tr'
 ds_path='./'
 
 # Fixed parameter
@@ -44,7 +45,7 @@ imp_task(){
 # Set up fixed parameter and train command
 cmd="python ../../main.py"
 cmd="${cmd} --dataset_name ${ds}"
-cmd="${cmd} --train_part st_tr"
+cmd="${cmd} --train_part ${imp_part}"
 cmd="${cmd} --valid_part ${va_part}"
 cmd="${cmd} --dataset_path ${ds_path}"
 cmd="${cmd} --flag train"
@@ -74,6 +75,7 @@ train_cmd="python ../../main.py"
 train_cmd="${train_cmd} --dataset_name ${ds}"
 train_cmd="${train_cmd} --train_part ${tr_part}"
 train_cmd="${train_cmd} --valid_part ${va_part}"
+train_cmd="${train_cmd} --imp_part ${imp_part}"
 train_cmd="${train_cmd} --dataset_path ${ds_path}"
 train_cmd="${train_cmd} --flag ${flag}"
 train_cmd="${train_cmd} --model_name ${model_name}"

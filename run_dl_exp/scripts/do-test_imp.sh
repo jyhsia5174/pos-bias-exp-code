@@ -16,7 +16,7 @@ if [ -d "${imp_dir}" ]; then
 	imp_bs=`python select_params.py logs ${mode} | cut -d' ' -f3` 
 	imp_k=`python select_params.py logs ${mode} | cut -d' ' -f4`
 	imp_epoch=`python select_params.py logs ${mode} | cut -d' ' -f5`
-	imp_epoch=$((${epoch}+1))
+	imp_epoch=$((${imp_epoch}+1))
 	cd ${root}
 else
 	echo "Can not find dir ${imp_dir}!"
@@ -27,6 +27,7 @@ fi
 ds='pos'
 tr_part='sc_trva'
 va_part='rnd_gt'
+imp_part='st_trva'
 ds_path='./'
 
 # Fixed parameter
@@ -48,7 +49,7 @@ imp_task(){
 # Set up fixed parameter and train command
 cmd="python ../../main.py"
 cmd="${cmd} --dataset_name ${ds}"
-cmd="${cmd} --train_part st_trva"
+cmd="${cmd} --train_part ${imp_part}"
 cmd="${cmd} --valid_part ${va_part}"
 cmd="${cmd} --dataset_path ${ds_path}"
 cmd="${cmd} --flag train"
@@ -69,7 +70,7 @@ imp_task
 imp_task | xargs -0 -d '\n' -P 1 -I {} sh -c {}
 
 imp_model_path=`find ./imp_log_trva -name "*.pt"`
-imp_model_name=`echo $(basename ${model_path}) | cut -d'_' -f1`
+imp_model_name=`echo $(basename ${imp_model_path}) | cut -d'_' -f1`
 echo "imp_model_name: ${imp_model_name}, imp_model_path: ${imp_model_path}"
 
 task(){
@@ -78,6 +79,7 @@ cmd="python ../../main.py"
 cmd="${cmd} --dataset_name ${ds}"
 cmd="${cmd} --train_part ${tr_part}"
 cmd="${cmd} --valid_part ${va_part}"
+cmd="${cmd} --imp_part ${imp_part}"
 cmd="${cmd} --dataset_path ${ds_path}"
 cmd="${cmd} --flag ${flag}"
 cmd="${cmd} --model_name ${model_name}"

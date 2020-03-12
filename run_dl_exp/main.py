@@ -28,7 +28,8 @@ from utility import recommend
 
 class data_prefetcher():
     def __init__(self, loader, device):
-        self.device = device
+        #self.device = device
+        self.device = None
         self.loader = iter(loader)
         self.stream = torch.cuda.Stream()
         self.preload()
@@ -149,14 +150,17 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     prefetcher = data_prefetcher(data_loader, device)
     pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
     data_pack = prefetcher.next()
+    #torch.cuda.synchronize()
     i = 0
     while data_pack[0] is not None:
         y, target = model_helper(data_pack, model, model_name, device, 'wps')
+        #torch.cuda.synchronize()
         loss = criterion(y, target.float())
         model.zero_grad()
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
+        #torch.cuda.synchronize()
         if (i + 1) % log_interval == 0:
             closs = total_loss/log_interval
             pbar.set_postfix(loss=closs)
@@ -164,12 +168,15 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
         data_pack = prefetcher.next()
         i += 1
         pbar.update(1)
+        #torch.cuda.synchronize()
     pbar.close()
     return loss.item()
 
-def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, criterion, imp_criterion, device, model_name, log_interval=1000):
+def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, criterion, imp_criterion, device, model_name, log_interval=200):
     model.train()
     imp_model.eval()
+    total_loss1 = 0
+    total_loss2 = 0
     total_loss = 0
     #pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
     #for i, tmp in enumerate(pbar):
@@ -180,7 +187,7 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, 
     imp_data_pack = imp_prefetcher.next()
     pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
     i = 0
-    closs=np.nan
+    #closs=np.nan
     while data_pack[0] is not None:
         #try:
         #    imp_data_pack = next(imp_data_loader_iter)
@@ -194,17 +201,22 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, 
         loss1 = criterion(y, target.float())
         loss2 = imp_criterion(hat_y, imp_y)
         loss = loss1 + omega*loss2
-        pbar.set_postfix(nll='%.4f'%loss1.item(), mse='%.4f'%loss2.item(), loss='%.4f'%loss.item(),closs='%.4f'%closs)
 
         model.zero_grad()
         loss.backward()
         optimizer.step()
 
+        total_loss1 += loss1.item()
+        total_loss2 += loss2.item()
         total_loss += loss.item()
         if (i + 1) % log_interval == 0:
-            closs = total_loss/log_interval
-            pbar.set_postfix(nll='%.4f'%loss1.item(), mse='%.4f'%loss2.item(), loss='%.4f'%loss.item(),closs='%.4f'%closs)
+            total_loss1 /= log_interval
+            total_loss2 /= log_interval
+            total_loss /= log_interval
+            pbar.set_postfix(nll='%.4f'%total_loss1, mse='%.4f'%total_loss2, loss='%.4f'%total_loss)
             #pbar.set_postfix(loss=closs)
+            total1_loss = 0
+            total2_loss = 0
             total_loss = 0
 
         data_pack = prefetcher.next()
@@ -266,6 +278,7 @@ def pred(model, data_loader, device, model_name, item_num):
 def main(dataset_name,
          train_part,
          valid_part,
+         imp_part,
          dataset_path,
          flag,
          model_name,
@@ -281,14 +294,16 @@ def main(dataset_name,
          save_dir,
          ps):
     mkdir_if_not_exist(save_dir)
-    device = torch.device(device)
+    #device = torch.device(device)
+    device = torch.device('cuda') 
     #torch.cuda.device(device)
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
-        model = get_model(model_name, train_dataset, embed_dim).to(device)
+        model = get_model(model_name, train_dataset, embed_dim)#.to(device)
+        model = torch.nn.parallel.DataParallel(model).cuda()
         criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
@@ -300,7 +315,7 @@ def main(dataset_name,
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
     elif flag == 'imp_train':
-        st_dataset = get_dataset(dataset_name, dataset_path, 'st_tr', False)
+        st_dataset = get_dataset(dataset_name, dataset_path, imp_part, False)
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
         imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, True)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
@@ -351,6 +366,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', default='pos')
     parser.add_argument('--train_part', default='tr')
     parser.add_argument('--valid_part', default='va')
+    parser.add_argument('--imp_part', default='st_tr')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm trva.svm')
     parser.add_argument('--flag', default='train')
     parser.add_argument('--model_name', default='dssm')
@@ -369,6 +385,7 @@ if __name__ == '__main__':
     main(args.dataset_name,
          args.train_part,
          args.valid_part,
+         args.imp_part,
          args.dataset_path,
          args.flag,
          args.model_name,

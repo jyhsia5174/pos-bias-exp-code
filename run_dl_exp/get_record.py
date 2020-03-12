@@ -18,6 +18,6 @@ with open(f_path, 'r') as f:
             auc.append(line.strip().split(' ')[-1])
 
 for i in logloss:
-    print(i)
+    print('%.4f'%float(i.strip()))
 for i in auc:
-    print(i)
+    print('%.3f'%float(i.strip()))
