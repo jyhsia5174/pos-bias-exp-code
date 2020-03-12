@@ -34,6 +34,8 @@ class data_prefetcher():
         self.stream = torch.cuda.Stream()
         self.preload()
 
+    def merge_dims(self, t):
+        return t.view(tuple(-1 if i==0 else _s for i, _s in enumerate(t.size()[1:])))
     #@profile
     def preload(self):
         try:
@@ -47,11 +49,11 @@ class data_prefetcher():
         with torch.cuda.stream(self.stream):
             #self.next_input = self.next_input.cuda(non_blocking=True)
             #self.next_target = self.next_target.cuda(non_blocking=True)
-            self.context = self.context.cuda(device=self.device, non_blocking=True) 
-            self.item = self.item.cuda(device=self.device, non_blocking=True)
-            self.target = self.target.cuda(device=self.device, non_blocking=True) 
-            self.pos = self.pos.cuda(device=self.device, non_blocking=True) 
-            self.value = self.value.cuda(device=self.device, non_blocking=True) 
+            self.context = self.merge_dims(self.context).cuda(device=self.device, non_blocking=True) 
+            self.item = self.merge_dims(self.item).cuda(device=self.device, non_blocking=True)
+            self.target = self.merge_dims(self.target).cuda(device=self.device, non_blocking=True) 
+            self.pos = self.merge_dims(self.pos).cuda(device=self.device, non_blocking=True) 
+            self.value = self.merge_dims(self.value).cuda(device=self.device, non_blocking=True) 
             
     def next(self):
         torch.cuda.current_stream().wait_stream(self.stream)
@@ -296,7 +298,6 @@ def main(dataset_name,
     mkdir_if_not_exist(save_dir)
     #device = torch.device(device)
     device = torch.device('cuda') 
-    #torch.cuda.device(device)
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
