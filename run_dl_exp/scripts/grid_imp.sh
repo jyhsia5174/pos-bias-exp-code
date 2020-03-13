@@ -34,7 +34,7 @@ ds_path='./'
 # Fixed parameter
 flag='imp_train'
 epoch=25
-bs=4096
+bs=1000
 
 # others
 log_path="logs"

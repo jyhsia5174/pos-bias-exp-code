@@ -26,6 +26,9 @@ from src.model.dcn import DeepCrossNetworkModel
 from utility import recommend
 
 
+def merge_dims(t):
+    return t.view(tuple(-1 if i==0 else _s for i, _s in enumerate(t.size()[1:])))
+
 class data_prefetcher():
     def __init__(self, loader, device):
         #self.device = device
@@ -39,16 +42,11 @@ class data_prefetcher():
     #@profile
     def preload(self):
         try:
-            #self.next_input, self.next_target = next(self.loader)
             self.context, self.item, self.target, self.pos, _, self.value = next(self.loader)
         except StopIteration:
-            #self.next_input = None
-            #self.next_target = None
             self.context, self.item, self.target, self.pos, self.value = None, None, None, None, None
             return
         with torch.cuda.stream(self.stream):
-            #self.next_input = self.next_input.cuda(non_blocking=True)
-            #self.next_target = self.next_target.cuda(non_blocking=True)
             self.context = self.merge_dims(self.context).cuda(device=self.device, non_blocking=True) 
             self.item = self.merge_dims(self.item).cuda(device=self.device, non_blocking=True)
             self.target = self.merge_dims(self.target).cuda(device=self.device, non_blocking=True) 
@@ -57,15 +55,13 @@ class data_prefetcher():
             
     def next(self):
         torch.cuda.current_stream().wait_stream(self.stream)
-        #input = self.next_input
-        #target = self.next_target
         context = self.context 
         item = self.item
         target = self.target 
         pos = self.pos 
         value = self.value 
         self.preload()
-        #return input, target
+
         return context, item, target, pos, None, value
 
 def mkdir_if_not_exist(path):
@@ -128,7 +124,7 @@ def get_model(name, dataset, embed_dim):
 def model_helper(data_pack, model, model_name, device, mode='wps'):
     context, item, target, pos, _, value = data_pack
     #context, item, target, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), value.to(device, torch.float)
-    #context, item, target, value = context.to(device, non_blocking=True), item.to(device, non_blocking=True), target.to(device, non_blocking=True), value.to(device, non_blocking=True)
+    #context, item, target, value = merge_dims(context.to(device, non_blocking=True)), merge_dims(item.to(device, non_blocking=True)), merge_dims(target.to(device, non_blocking=True)), merge_dims(value.to(device, non_blocking=True))
     if model_name.startswith(('bi', 'ext')):
         #pos = pos.to(device, torch.long)
         if mode == 'wops':
@@ -152,17 +148,14 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
     prefetcher = data_prefetcher(data_loader, device)
     pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
     data_pack = prefetcher.next()
-    #torch.cuda.synchronize()
     i = 0
     while data_pack[0] is not None:
         y, target = model_helper(data_pack, model, model_name, device, 'wps')
-        #torch.cuda.synchronize()
         loss = criterion(y, target.float())
         model.zero_grad()
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-        #torch.cuda.synchronize()
         if (i + 1) % log_interval == 0:
             closs = total_loss/log_interval
             pbar.set_postfix(loss=closs)
@@ -170,7 +163,6 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
         data_pack = prefetcher.next()
         i += 1
         pbar.update(1)
-        #torch.cuda.synchronize()
     pbar.close()
     return loss.item()
 
@@ -189,13 +181,7 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, 
     imp_data_pack = imp_prefetcher.next()
     pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
     i = 0
-    #closs=np.nan
     while data_pack[0] is not None:
-        #try:
-        #    imp_data_pack = next(imp_data_loader_iter)
-        #except StopIteration:
-        #    imp_data_loader_iter = iter(imp_data_loader)
-        #    imp_data_pack = next(imp_data_loader_iter)
         y, target = model_helper(data_pack, model, model_name, device, 'wps')
         imp_y, _ = model_helper(imp_data_pack, imp_model, model_name, device, 'wps')
         hat_y, _ = model_helper(imp_data_pack, model, model_name, device, 'wps')
@@ -216,7 +202,6 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, imp_data_loader, 
             total_loss2 /= log_interval
             total_loss /= log_interval
             pbar.set_postfix(nll='%.4f'%total_loss1, mse='%.4f'%total_loss2, loss='%.4f'%total_loss)
-            #pbar.set_postfix(loss=closs)
             total1_loss = 0
             total2_loss = 0
             total_loss = 0
@@ -232,8 +217,8 @@ def test(model, data_loader, device, model_name, mode='wps'):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
-        #    for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-        #        y, target = model_helper(tmp, model, model_name, device, mode)
+        #for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
+        #    y, target = model_helper(tmp, model, model_name, device, mode)
         prefetcher = data_prefetcher(data_loader, device)
         pbar = tqdm.tqdm(total=len(data_loader), smoothing=0, mininterval=1.0, ncols=100)
         data_pack = prefetcher.next()
@@ -245,7 +230,7 @@ def test(model, data_loader, device, model_name, mode='wps'):
             data_pack = prefetcher.next()
             i += 1
             pbar.update(1)
-    #print("Evaluate on %d samples"%len(targets))
+    torch.cuda.synchronize()
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 
@@ -311,6 +296,7 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
+                torch.cuda.synchronize()
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
@@ -321,8 +307,9 @@ def main(dataset_name,
         imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, True)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
 
+        imp_bs = int(batch_size*train_dataset.pos_num//train_dataset.item_num)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
-        imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
+        imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=imp_bs, num_workers=8, pin_memory=True, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
 
         model = get_model(model_name, train_dataset, embed_dim).to(device)

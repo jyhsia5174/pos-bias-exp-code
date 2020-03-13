@@ -29,7 +29,7 @@ do
 		cmd="${cmd} --model_name ${model_name}"
 		cmd="${cmd} --model_path ${model_path}"
 		cmd="${cmd} --device cuda:${gpu}"
-		cmd="${cmd} --batch_size 4096"
+		cmd="${cmd} --batch_size 1024"
 		cmd="${cmd} --ps ${ps}"
 		echo "${cmd} > ${root}/${va_prefix}${i}${j}log"
 	done

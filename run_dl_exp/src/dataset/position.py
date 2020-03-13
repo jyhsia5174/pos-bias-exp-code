@@ -144,7 +144,7 @@ class PositionDataset(Dataset):
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
                 flags = np.ones(self.pos_num)*-1
 
-                items = self.items.astype(np.long)
+                items = self.items[:self.item_num, :].astype(np.long)
                 ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             item_idxes = np.arange(self.item_num, dtype=np.int32)
@@ -154,7 +154,10 @@ class PositionDataset(Dataset):
             ctx_value[ctx_idx > self.tr_max_dim] = 0
         #return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
         #print(data.shape, item.shape, flag, pos, item_idx, value.shape)
-        return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
+        if not self.test_flag:
+            return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
+        else:
+            return np.tile(ctx_idx, (self.item_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
 
 
     def get_max_dim(self):

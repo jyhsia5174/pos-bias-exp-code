@@ -16,7 +16,7 @@ ds_path='./'
 # Fixed parameter
 flag='train'
 epoch=25
-bs=4096
+bs=1000
 
 # others
 log_path="logs"
@@ -38,7 +38,7 @@ train_cmd="${train_cmd} --batch_size ${bs}"
 train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
-for lr in 0.001 #0.001 0.0001
+for lr in 0.002 #0.001 0.0001
 do
     for wd in 16e-6 4e-6 1e-6 25e-8 625e-10
     do

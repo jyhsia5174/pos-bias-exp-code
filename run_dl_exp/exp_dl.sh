@@ -37,6 +37,8 @@ do
 	mkdir -p ${cdir}
 	ln -sf ${root}/scripts/*.sh ${cdir}
 	ln -sf ${root}/scripts/*.py ${cdir}
+	rm ${cdir}/*imp.sh
+	rm ${cdir}/*imp.py
 	ln -sf ${root}/${data_path}/derive/*gt*svm ${cdir}
 	ln -sf ${root}/${data_path}/derive/item.svm ${cdir}
 	ln -sf ${root}/${data_path}/derive/truth.svm ${cdir}
@@ -46,15 +48,17 @@ do
 	done
 	run_exp ${cdir} ${root} ${mode} ${model_name} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 done
-exit 0
+
 for i in '.comb.' '.'
 do 
-	for k in 0.01 
+	for k in 0.01 0.1 
 	do 
 		cdir=${exp_dir}/der${i}${k}.${model_name}
 		mkdir -p ${cdir}
 		ln -sf ${root}/scripts/*.sh ${cdir}
 		ln -sf ${root}/scripts/*.py ${cdir}
+		rm ${cdir}/*imp.sh
+		rm ${cdir}/*imp.py
 		ln -sf ${root}/${data_path}/der${i}${k}/*gt*svm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}/item.svm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}/truth.svm ${cdir}
@@ -65,7 +69,6 @@ do
 		run_exp ${cdir} ${root} ${mode} ${model_name} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
-exit 0
 
 
 ## Check command
