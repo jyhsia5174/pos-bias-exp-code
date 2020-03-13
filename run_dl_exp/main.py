@@ -230,7 +230,7 @@ def test(model, data_loader, device, model_name, mode='wps'):
             data_pack = prefetcher.next()
             i += 1
             pbar.update(1)
-    torch.cuda.synchronize()
+        pbar.close()
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 
