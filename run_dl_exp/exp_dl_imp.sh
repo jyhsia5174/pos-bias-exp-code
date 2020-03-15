@@ -52,7 +52,7 @@ do
 			done
 		done
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.svm ${cdir}/va.svm
-		run_exp ${cdir} ${root} ${mode} ${model_name} ../der.${k}.${model_name} #| xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+		run_exp ${cdir} ${root} ${mode} ${model_name} ../der.${k}.${model_name} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
 exit 0

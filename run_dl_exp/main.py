@@ -76,9 +76,9 @@ def hook(self, input, output):
     print(tmp)
     print(ratio, np.mean(ratio[1:]))
 
-def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
+def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, read_flag=0):
     if name == 'pos':
-        return PositionDataset(path, data_prefix, rebuild_cache, max_dim, test_flag)
+        return PositionDataset(path, data_prefix, rebuild_cache, max_dim, read_flag)
     else:
         raise ValueError('unknown dataset name: ' + name)
 
@@ -304,7 +304,7 @@ def main(dataset_name,
     elif flag == 'imp_train':
         st_dataset = get_dataset(dataset_name, dataset_path, imp_part, False)
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
-        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, True)
+        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, 3)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
 
         imp_bs = int(batch_size*train_dataset.pos_num//train_dataset.item_num)
@@ -336,7 +336,7 @@ def main(dataset_name,
         print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
     elif flag == 'pred':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
-        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, 1)
         item_num = valid_dataset.get_item_num()
         refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
         valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, pin_memory=True)

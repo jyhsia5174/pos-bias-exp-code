@@ -13,9 +13,16 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
 class PositionDataset(Dataset):
-    def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, tr_max_dim=-1, test_flag=False):
+    def __init__(self, dataset_path=None, data_prefix='tr', rebuild_cache=False, tr_max_dim=-1, read_flag=0):
+        '''
+        test_flag: 
+            0: cntx_num*position_num
+            1: cntx_num*item_num
+            2: cntx_num*(item_num-position_num)
+            3: cntx_num*(item_num-position_num), then randomly choose position_num items
+        '''
         self.tr_max_dim = tr_max_dim
-        self.test_flag = test_flag
+        self.read_flag = read_flag
         data_path = os.path.join(dataset_path, data_prefix + '.svm')
         item_path = os.path.join(dataset_path, 'item.svm')
         assert Path(data_path).exists(), "%s does not exist!"%data_path
@@ -38,8 +45,9 @@ class PositionDataset(Dataset):
             self.pos_num = np.frombuffer(txn.get(b'pos_num'), dtype=np.int32)[0]
             self.max_ctx_num = np.frombuffer(txn.get(b'max_ctx_num'), dtype=np.int32)[0]
             self.max_item_num = np.frombuffer(txn.get(b'max_item_num'), dtype=np.int32)[0]
-            #self.length = self.pos_num*(txn.stat()['entries'] - 6)//2 if not self.test_flag else self.item_num*(txn.stat()['entries'] - 6)//2
-            self.length = (txn.stat()['entries'] - 6)//2 if not self.test_flag else (txn.stat()['entries'] - 6)//2
+            #self.length = self.pos_num*(txn.stat()['entries'] - 6)//2 if self.read_flag == 1 else self.item_num*(txn.stat()['entries'] - 6)//2
+            self.length = (txn.stat()['entries'] - 6)//2 
+            self.item_set = np.arange(self.item_num, dtype=np.int32)
             print('Totally %d items, %d dims, %d positions, %d samples'%(self.item_num, self.max_dim, self.pos_num, self.length))
     
     def __build_cache(self, data_path, item_path, cache_path):
@@ -125,7 +133,7 @@ class PositionDataset(Dataset):
 
     #@profile
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
-        if not self.test_flag:
+        if self.read_flag == 0:
             #context_idx, pos = divmod(idx, self.pos_num)
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
@@ -137,27 +145,56 @@ class PositionDataset(Dataset):
                 ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             pos = np.arange(1, self.pos_num+1, dtype=np.long)
-        else:
+        elif self.read_flag == 1:
             #context_idx, item_idx = divmod(idx, self.item_num)
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
-                flags = np.ones(self.pos_num)*-1
 
                 items = self.items[:self.item_num, :].astype(np.long)
                 ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             item_idxes = np.arange(self.item_num, dtype=np.int32)
+            flags = np.ones(self.item_num)*-1
+            pos = np.zeros(self.item_num)
+        elif self.read_flag == 2:
+            with self.env.begin(write=False) as txn:
+                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
+                item_idxes = np.setxor1d(item_array[:self.pos_num].astype(np.int32), self.item_set, True)
+
+                items = self.items[item_idxes, :].astype(np.long)
+                ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
+                ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
+            flags = np.ones(self.item_num - self.pos_num)*-1
+            pos = np.zeros(self.item_num - self.pos_num)
+        elif self.read_flag == 3:
+            with self.env.begin(write=False) as txn:
+                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
+                item_idxes = np.setxor1d(item_array[:self.pos_num].astype(np.int32), self.item_set, True)
+                item_idxes = np.random.choice(item_idxes, self.pos_num, replace=False)
+
+                items = self.items[item_idxes, :].astype(np.long)
+                ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
+                ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
+            flags = np.ones(self.pos_num)*-1
             pos = np.zeros(self.pos_num)
+        else:
+            raise ValueError('Wrong flag for reading data'%self.read_flag)
         if self.tr_max_dim > 0:
             ctx_idx[ctx_idx > self.tr_max_dim] = 0
             ctx_value[ctx_idx > self.tr_max_dim] = 0
         #return {'context':data, 'item':item, 'label':flag, 'pos':pos, 'item_idx':item_idx, 'value':value}  # pos \in {1,2,...9,10}, 0 for no-position
         #print(data.shape, item.shape, flag, pos, item_idx, value.shape)
-        if not self.test_flag:
+        if self.read_flag == 0:
             return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
-        else:
+        elif self.read_flag == 1:
             return np.tile(ctx_idx, (self.item_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
+        elif self.read_flag == 2:
+            return np.tile(ctx_idx, (self.item_num - self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num - self.pos_num, 1)) 
+        else:
+            return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  
 
 
     def get_max_dim(self):
@@ -184,23 +221,24 @@ if __name__ == '__main__':
     def main(dataset):
         device='cuda:0'
         #data_loader = DataLoader(dataset, batch_size=4096, num_workers=0, collate_fn=collate_fn_for_dssm, shuffle=True)
-        data_loader = DataLoader(dataset, batch_size=4096, num_workers=0,)# shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=1, num_workers=0,)# shuffle=True)
     
         pbar = tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
         for i, data_pack in enumerate(pbar):
-            context, item, target, pos, _, value = data_pack
-            context, item, target, pos, value = \
-                    context.view(tuple(-1 if i==0 else _s for i, _s in enumerate(context.size()[1:]))).to(device, torch.long), \
-                    item.view(tuple(-1 if i==0 else _s for i, _s in enumerate(item.size()[1:]))).to(device, torch.long), \
-                    target.view(tuple(-1 if i==0 else _s for i, _s in enumerate(target.size()[1:]))).to(device, torch.float), \
-                    pos.view(tuple(-1 if i==0 else _s for i, _s in enumerate(pos.size()[1:]))).to(device, torch.long), \
-                    value.view(tuple(-1 if i==0 else _s for i, _s in enumerate(value.size()[1:]))).to(device, torch.float)
+            context, item, target, pos, item_idxes, value = data_pack
+            #context, item, target, pos, value = \
+            #        context.view(tuple(-1 if i==0 else _s for i, _s in enumerate(context.size()[1:]))).to(device, torch.long), \
+            #        item.view(tuple(-1 if i==0 else _s for i, _s in enumerate(item.size()[1:]))).to(device, torch.long), \
+            #        target.view(tuple(-1 if i==0 else _s for i, _s in enumerate(target.size()[1:]))).to(device, torch.float), \
+            #        pos.view(tuple(-1 if i==0 else _s for i, _s in enumerate(pos.size()[1:]))).to(device, torch.long), \
+            #        value.view(tuple(-1 if i==0 else _s for i, _s in enumerate(value.size()[1:]))).to(device, torch.float)
             #print(context[30:32], item[30:32], target[30:32], pos[30:32], value[30:32])
             print(context.size(), item.size(), target.size(), pos.size(), value.size())
+            print(item_idxes)
             #print(context, item, target, pos, value)
             if i > -1: break
             #print(idx, data, label, pos)
 
-    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, test_flag=False)
-    #dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, test_flag=False)
+    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, read_flag=1)
+    #dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, read_flag=0)
     main(dataset)
