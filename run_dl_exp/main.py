@@ -157,7 +157,7 @@ def model_helper(data_pack, model, model_name, device, mode='wps'):
     return y, target
 
 #@profile
-def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=1000):
+def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=200):
     model.train()
     total_loss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
@@ -308,8 +308,11 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
+
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        log_interval = len(train_data_loader)//10
+
         model = get_model(model_name, train_dataset, embed_dim)#.to(device)
         model = torch.nn.parallel.DataParallel(model).cuda()
         criterion = torch.nn.BCEWithLogitsLoss()
@@ -317,7 +320,7 @@ def main(dataset_name,
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
-                tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
+                tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name, log_interval)
                 torch.cuda.synchronize()
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
@@ -333,6 +336,7 @@ def main(dataset_name,
         train_data_loader = DataLoader(sim_train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         #imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=imp_bs, num_workers=8, pin_memory=True, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        log_interval = len(train_data_loader)//10
 
         model = get_model(model_name, st_dataset, embed_dim).to(device)
         imp_model = torch.load(imp_model_path).to(device)
@@ -343,7 +347,7 @@ def main(dataset_name,
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), 'o-'+str(omega), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
-                tr_logloss = imp_train(omega, model, imp_model, optimizer, train_data_loader, criterion, imp_criterion, device, model_name)
+                tr_logloss = imp_train(omega, model, imp_model, optimizer, train_data_loader, criterion, imp_criterion, device, model_name, log_interval)
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
