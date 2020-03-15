@@ -90,7 +90,7 @@ train_cmd="${train_cmd} --ps ${ps}"
 lr=${imp_lr}
 wd=${imp_wd}
 k=${imp_k}
-for o in 16 4 1 0.25 0.0625
+for o in 1 0.25 0.0625 0.015625 0.00390625
 do
 	cmd="${train_cmd} --learning_rate ${lr}"
     cmd="${cmd} --weight_decay ${wd}"

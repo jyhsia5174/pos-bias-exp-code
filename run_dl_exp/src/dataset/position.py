@@ -7,6 +7,7 @@ import lmdb
 import shutil
 import struct
 import subprocess
+import random
 from tqdm import tqdm
 from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
@@ -99,7 +100,7 @@ class PositionDataset(Dataset):
                 txn.put(b'max_ctx_num', max_ctx_num.tobytes())
                 txn.put(b'max_item_num', max_item_num.tobytes())
 
-    def __yield_buffer(self, data_path, buffer_size=int(1e5)):
+    def __yield_buffer(self, data_path, buffer_size=int(1e6)):
         sample_idx, max_dim, pos_num = 0, 0, 0
         buf = list()
         with open(data_path, 'r') as fd:
@@ -216,16 +217,47 @@ if __name__ == '__main__':
     #    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
     #    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
     #    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
+    def set_seed(x=0):
+        np.random.seed(x)
+        random.seed(x)
+        torch.manual_seed(x)
+        torch.cuda.manual_seed_all(x)
+        torch.backends.cudnn.deterministic = True
+        return
+
+    def worker_init_fn(x, inseed=0):
+        seed = inseed + x
+        set_seed(seed)
+        return
+
+    class SimDataset(Dataset):
+        def __init__(self, dataset1, dataset2):
+            assert len(dataset1) == len(dataset2), "Can't combine 2 datasets for their different length!"
+            self.dataset1 = dataset1 # datasets should be sorted!
+            self.dataset2 = dataset2
+
+        def __getitem__(self, index):
+            x1 = self.dataset1[index]
+            x2 = self.dataset2[index]
+
+            return x1, x2
+
+        def __len__(self):
+            return len(self.dataset1)
 
     #@profile
-    def main(dataset):
+    def main(dataset, imp_dataset):
+        from torch.utils.data import SubsetRandomSampler as srs
         device='cuda:0'
         #data_loader = DataLoader(dataset, batch_size=4096, num_workers=0, collate_fn=collate_fn_for_dssm, shuffle=True)
-        data_loader = DataLoader(dataset, batch_size=1, num_workers=0,)# shuffle=True)
+        sim_dataset = SimDataset(dataset, imp_dataset)
+        data_loader = DataLoader(sim_dataset, batch_size=10, num_workers=8, shuffle=True) #worker_init_fn=worker_init_fn, sampler=srs(sample_list))
     
         pbar = tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
-        for i, data_pack in enumerate(pbar):
+        for i, (data_pack, imp_data_pack) in enumerate(pbar):
+        #for i, (data_pack, imp_data_pack) in enumerate(zip(data_loader, imp_data_loader)):
             context, item, target, pos, item_idxes, value = data_pack
+            imp_context, imp_item, imp_target, imp_pos, imp_item_idxes, imp_value = imp_data_pack
             #context, item, target, pos, value = \
             #        context.view(tuple(-1 if i==0 else _s for i, _s in enumerate(context.size()[1:]))).to(device, torch.long), \
             #        item.view(tuple(-1 if i==0 else _s for i, _s in enumerate(item.size()[1:]))).to(device, torch.long), \
@@ -233,12 +265,19 @@ if __name__ == '__main__':
             #        pos.view(tuple(-1 if i==0 else _s for i, _s in enumerate(pos.size()[1:]))).to(device, torch.long), \
             #        value.view(tuple(-1 if i==0 else _s for i, _s in enumerate(value.size()[1:]))).to(device, torch.float)
             #print(context[30:32], item[30:32], target[30:32], pos[30:32], value[30:32])
-            print(context.size(), item.size(), target.size(), pos.size(), value.size())
-            print(item_idxes)
+            #print(context.size(), item.size(), target.size(), pos.size(), value.size())
+            #print(item_idxes)
+            #print(context.size(), imp_context.size())
+            if (context[:, 0, :] - imp_context[:, 0, :]).sum().numpy() < 1e-9:
+                print('Same!')
+            else:
+                print((context[:, 0, :], imp_context[:, 0, :]))
+                break
             #print(context, item, target, pos, value)
-            if i > -1: break
+            #if i > -1 + 100: 
+            #    break
             #print(idx, data, label, pos)
 
-    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, read_flag=1)
-    #dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, read_flag=0)
-    main(dataset)
+    dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, read_flag=0)
+    imp_dataset = PositionDataset(dataset_path=sys.argv[1], data_prefix='va', rebuild_cache=False, tr_max_dim=-1, read_flag=2)
+    main(dataset, imp_dataset)
