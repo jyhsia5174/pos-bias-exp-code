@@ -153,6 +153,7 @@ def model_helper(data_pack, model, model_name, device, mode='wps'):
             raise(ValueError, "model_helper's mode %s is wrong!"%mode)
         y = model(context, item, pos, value)
     else:
+        #print(model.get_device(), context.get_device(), item.get_device(), value.get_device())
         y = model(context, item, value)
     return y, target
 
@@ -191,7 +192,7 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, criterion, imp_cr
     total_loss1 = 0
     total_loss2 = 0
     total_loss = 0
-    pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
+    pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0)#, ncols=100)
     for i, (data_pack, imp_data_pack) in enumerate(pbar):
 
     #prefetcher = data_prefetcher(data_loader, device)
@@ -203,8 +204,9 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, criterion, imp_cr
     #while data_pack[0] is not None:
 
         y, target = model_helper(data_pack, model, model_name, device, 'wps')
-        imp_y, _ = model_helper(imp_data_pack, imp_model, model_name, device, 'wps')
         hat_y, _ = model_helper(imp_data_pack, model, model_name, device, 'wps')
+        with torch.no_grad():
+            imp_y, _ = model_helper(imp_data_pack, imp_model, model_name, device, 'wps')
 
         loss1 = criterion(y, target.float())
         loss2 = imp_criterion(hat_y, imp_y)
@@ -221,7 +223,7 @@ def imp_train(omega, model, imp_model, optimizer, data_loader, criterion, imp_cr
             total_loss1 /= log_interval
             total_loss2 /= log_interval
             total_loss /= log_interval
-            pbar.set_postfix(nll='%.4f'%total_loss1, mse='%.4f'%total_loss2, loss='%.4f'%total_loss)
+            pbar.set_postfix(nll='%.4f'%total_loss1, mse='%.10f'%total_loss2, loss='%.4f'%total_loss)
             total1_loss = 0
             total2_loss = 0
             total_loss = 0
@@ -304,7 +306,7 @@ def main(dataset_name,
          ps):
     mkdir_if_not_exist(save_dir)
     #device = torch.device(device)
-    device = torch.device('cuda') 
+    device = torch.device('cuda:0') 
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
@@ -329,7 +331,7 @@ def main(dataset_name,
     elif flag == 'imp_train':
         st_dataset = get_dataset(dataset_name, dataset_path, imp_part, False)
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
-        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, 3)
+        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, 1)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
         sim_train_dataset = CombDataset(train_dataset, imp_train_dataset)
 
@@ -338,8 +340,12 @@ def main(dataset_name,
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
         log_interval = len(train_data_loader)//10
 
-        model = get_model(model_name, st_dataset, embed_dim).to(device)
+        if torch.cuda.device_count() > 1:
+            print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = get_model(model_name, st_dataset, embed_dim)
+        model = torch.nn.DataParallel(model).to(device)
         imp_model = torch.load(imp_model_path).to(device)
+        #imp_model = torch.nn.DataParallel(imp_model)
 
         criterion = torch.nn.BCEWithLogitsLoss()
         imp_criterion = torch.nn.MSELoss()  
