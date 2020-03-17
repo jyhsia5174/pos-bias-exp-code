@@ -46,10 +46,9 @@ do
 		#ln -sf ${root}/${data_path}/der${i}${k}.imp/truth.svm ${cdir}
 		for j in 'trva' 'tr'
 		do
-			for l in 'sc' 'st'
-			do
-				ln -sf ${root}/${data_path}/der${i}${k}.imp/select_${l}_${j}.svm ${cdir}/${l}_${j}.svm
-			done
+			#cat ${root}/${data_path}/der${i}${k}.imp/select_*_${j}.svm > ${cdir}/${j}.svm
+			ln -sf ${root}/${data_path}/der${i}${k}.imp/select_sc_${j}.svm ${cdir}/${j}.svm
+			ln -sf ${root}/${data_path}/der${i}${k}.imp/select_st_${j}.svm ${cdir}/imp_${j}.svm
 		done
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.svm ${cdir}/va.svm
 		run_exp ${cdir} ${root} ${mode} ${model_name} ../der.${k}.${model_name} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 

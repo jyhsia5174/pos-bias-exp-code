@@ -25,9 +25,9 @@ fi
 
 # Data set
 ds='pos'
-tr_part='sc_trva'
+tr_part='trva'
 va_part='rnd_gt'
-imp_part='st_trva'
+imp_part='imp_trva'
 ds_path='./'
 
 # Fixed parameter
