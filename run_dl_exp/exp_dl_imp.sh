@@ -46,8 +46,8 @@ do
 		#ln -sf ${root}/${data_path}/der${i}${k}.imp/truth.svm ${cdir}
 		for j in 'trva' 'tr'
 		do
-			#cat ${root}/${data_path}/der${i}${k}.imp/select_*_${j}.svm > ${cdir}/${j}.svm
-			ln -sf ${root}/${data_path}/der${i}${k}.imp/select_sc_${j}.svm ${cdir}/${j}.svm
+			cat ${root}/${data_path}/der${i}${k}.imp/select_*_${j}.svm > ${cdir}/${j}.svm
+			#ln -sf ${root}/${data_path}/der${i}${k}.imp/select_sc_${j}.svm ${cdir}/${j}.svm
 			ln -sf ${root}/${data_path}/der${i}${k}.imp/select_st_${j}.svm ${cdir}/imp_${j}.svm
 		done
 		ln -sf ${root}/${data_path}/der${i}${k}.imp/select_va.svm ${cdir}/va.svm

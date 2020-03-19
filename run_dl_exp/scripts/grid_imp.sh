@@ -33,7 +33,7 @@ ds_path='./'
 
 # Fixed parameter
 flag='imp_train'
-epoch=25
+epoch=30
 bs=1000
 
 # others
@@ -90,7 +90,7 @@ train_cmd="${train_cmd} --ps ${ps}"
 lr=${imp_lr}
 wd=${imp_wd}
 k=${imp_k}
-for o in 1 0.25 0.0625 0.015625 0.00390625
+for o in 16 4 0.001 0.00025 #1 0.25 0.0625 0.015625 0.00390625
 do
 	cmd="${train_cmd} --learning_rate ${lr}"
     cmd="${cmd} --weight_decay ${wd}"

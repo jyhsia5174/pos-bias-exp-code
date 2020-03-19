@@ -331,9 +331,9 @@ def main(dataset_name,
     elif flag == 'imp_train':
         st_dataset = get_dataset(dataset_name, dataset_path, imp_part, False)
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
-        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, 1)
+        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, 2)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
-        sim_train_dataset = CombDataset(train_dataset, imp_train_dataset)
+        sim_train_dataset = CombDataset(train_dataset, imp_train_dataset, True)
 
         train_data_loader = DataLoader(sim_train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         #imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=imp_bs, num_workers=8, pin_memory=True, shuffle=True)
