@@ -7,6 +7,7 @@ mode=$2
 model_name=$3
 ps=$4
 imp_dir=$5
+imp_mode=$6
 
 root=`pwd`
 if [ -d "${imp_dir}" ]; then
@@ -59,6 +60,7 @@ cmd="${cmd} --device ${device}"
 cmd="${cmd} --save_dir imp_log_trva"
 cmd="${cmd} --batch_size ${imp_bs}"
 cmd="${cmd} --ps ${ps}"
+cmd="${cmd} --seed 10"
 cmd="${cmd} --learning_rate ${imp_lr}"
 cmd="${cmd} --weight_decay ${imp_wd}"
 cmd="${cmd} --embed_dim ${imp_k}"
@@ -89,6 +91,8 @@ cmd="${cmd} --device ${device}"
 cmd="${cmd} --save_dir ${log_path}"
 cmd="${cmd} --batch_size ${bs}"
 cmd="${cmd} --ps ${ps}"
+cmd="${cmd} --imp_mode ${imp_mode}"
+cmd="${cmd} --seed 10"
 cmd="${cmd} --learning_rate ${lr}"
 cmd="${cmd} --weight_decay ${wd}"
 cmd="${cmd} --embed_dim ${k}"

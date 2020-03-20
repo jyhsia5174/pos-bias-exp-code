@@ -4,6 +4,7 @@ import time
 import tqdm
 import numpy as np
 import sys
+import random
 from sklearn.metrics import roc_auc_score, log_loss
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.utils.rnn as rnn_utils
@@ -25,6 +26,15 @@ from src.model.dfm import DeepFactorizationMachineModel
 from src.model.dcn import DeepCrossNetworkModel
 from utility import recommend
 
+
+def set_seed(x):
+    np.random.seed(x)
+    random.seed(x)
+    torch.manual_seed(x)
+    torch.cuda.manual_seed_all(x)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    return
 
 class CombDataset(Dataset):
     def __init__(self, dataset1, dataset2, sim=False):
@@ -303,8 +313,12 @@ def main(dataset_name,
          omega,
          device,
          save_dir,
-         ps):
+         ps,
+         seed,
+         imp_mode):
     mkdir_if_not_exist(save_dir)
+    if seed is not None:
+        set_seed(int(seed))
     #device = torch.device(device)
     device = torch.device('cuda:0') 
     if flag == 'train':
@@ -331,13 +345,13 @@ def main(dataset_name,
     elif flag == 'imp_train':
         st_dataset = get_dataset(dataset_name, dataset_path, imp_part, False)
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
-        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, 2)
+        imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, imp_mode)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
         sim_train_dataset = CombDataset(train_dataset, imp_train_dataset, True)
 
         train_data_loader = DataLoader(sim_train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
-        #imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=imp_bs, num_workers=8, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        #imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=imp_bs, num_workers=8, pin_memory=True, shuffle=True,)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True,)
         log_interval = len(train_data_loader)//10
 
         if torch.cuda.device_count() > 1:
@@ -361,7 +375,7 @@ def main(dataset_name,
     elif flag == 'test':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True,)
         model = torch.load(model_path, map_location=device)
         va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
         print("model logloss auc")
@@ -371,7 +385,7 @@ def main(dataset_name,
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, 1)
         item_num = valid_dataset.get_item_num()
         refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
-        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, pin_memory=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, pin_memory=True,)
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     else:
@@ -401,6 +415,8 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
     parser.add_argument('--ps', default='wps')
+    parser.add_argument('--seed', default=None)
+    parser.add_argument('--imp_mode', default=2, type=int)
     args = parser.parse_args()
     main(args.dataset_name,
          args.train_part,
@@ -419,5 +435,7 @@ if __name__ == '__main__':
          args.omega,
          args.device,
          args.save_dir,
-         args.ps)
+         args.ps,
+         args.seed,
+         args.imp_mode)
 

@@ -19,8 +19,9 @@ class PositionDataset(Dataset):
         test_flag: 
             0: cntx_num*position_num
             1: cntx_num*item_num
-            2: cntx_num*(item_num-position_num)
-            3: cntx_num*(item_num-position_num), then randomly choose position_num items
+            2: cntx_num*item_num, then randomly choose position_num items
+            3: cntx_num*(item_num-position_num)
+            4: cntx_num*(item_num-position_num), then randomly choose position_num items
         '''
         self.tr_max_dim = tr_max_dim
         self.read_flag = read_flag
@@ -152,17 +153,25 @@ class PositionDataset(Dataset):
                 item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
 
-                #items = self.items[:self.item_num, :].astype(np.long)
+                items = self.items[:self.item_num, :].astype(np.long)
+                ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
+                ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
+            item_idxes = np.arange(self.item_num, dtype=np.int32)
+            flags = np.ones(self.item_num)*-1
+            pos = np.zeros(self.item_num)
+        elif self.read_flag == 2:
+            #context_idx, item_idx = divmod(idx, self.item_num)
+            with self.env.begin(write=False) as txn:
+                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
+
                 item_idxes = np.random.choice(self.item_set, self.pos_num, replace=False)
                 items = self.items[item_idxes, :].astype(np.long)
                 ctx_idx = ctx_array[:self.max_ctx_num].astype(np.long)  # context
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
-            #item_idxes = np.arange(self.item_num, dtype=np.int32)
-            #flags = np.ones(self.item_num)*-1
-            #pos = np.zeros(self.item_num)
             flags = np.ones(self.pos_num)*-1
             pos = np.zeros(self.pos_num)
-        elif self.read_flag == 2:
+        elif self.read_flag == 3:
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
@@ -173,7 +182,7 @@ class PositionDataset(Dataset):
                 ctx_value = ctx_array[self.max_ctx_num:].copy()  # context
             flags = np.ones(self.item_num - self.pos_num)*-1
             pos = np.zeros(self.item_num - self.pos_num)
-        elif self.read_flag == 3:
+        elif self.read_flag == 4:
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32)
@@ -195,9 +204,10 @@ class PositionDataset(Dataset):
         if self.read_flag == 0:
             return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
         elif self.read_flag == 1:
-            #return np.tile(ctx_idx, (self.item_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
-            return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  
+            return np.tile(ctx_idx, (self.item_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
         elif self.read_flag == 2:
+            return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  
+        elif self.read_flag == 3:
             return np.tile(ctx_idx, (self.item_num - self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num - self.pos_num, 1)) 
         else:
             return np.tile(ctx_idx, (self.pos_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.pos_num, 1))  

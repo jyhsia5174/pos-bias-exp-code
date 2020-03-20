@@ -8,6 +8,7 @@ mode=$2
 model_name=$3
 ps=$4
 imp_dir=$5
+imp_mode=$6
 
 root=`pwd`
 if [ -d "${imp_dir}" ]; then
@@ -55,6 +56,7 @@ cmd="${cmd} --device ${device}"
 cmd="${cmd} --save_dir imp_log_tr"
 cmd="${cmd} --batch_size ${imp_bs}"
 cmd="${cmd} --ps ${ps}"
+cmd="${cmd} --seed 10"
 cmd="${cmd} --learning_rate ${imp_lr}"
 cmd="${cmd} --weight_decay ${imp_wd}"
 cmd="${cmd} --embed_dim ${imp_k}"
@@ -85,12 +87,14 @@ train_cmd="${train_cmd} --device ${device}"
 train_cmd="${train_cmd} --save_dir ${log_path}"
 train_cmd="${train_cmd} --batch_size ${bs}"
 train_cmd="${train_cmd} --ps ${ps}"
+train_cmd="${train_cmd} --imp_mode ${imp_mode}"
+train_cmd="${train_cmd} --seed 10"
 
 # Print out all parameter pair
 lr=${imp_lr}
 wd=${imp_wd}
 k=${imp_k}
-for o in 16 4 0.001 0.00025 #1 0.25 0.0625 0.015625 0.00390625
+for o in 16 4 1 0.25 0.0625 0.015625 
 do
 	cmd="${train_cmd} --learning_rate ${lr}"
     cmd="${cmd} --weight_decay ${wd}"
