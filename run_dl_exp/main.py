@@ -49,7 +49,7 @@ class CombDataset(Dataset):
             x2 = self.dataset2[index]
         else:
             x1 = self.dataset1[index]
-            index = (np.random.randint(len(self.dataset1)) + index) // len(self.dataset1) 
+            index = (np.random.randint(len(self.dataset1)) + index) % len(self.dataset1) 
             x2 = self.dataset2[int(index)]
         return x1, x2
 
@@ -347,7 +347,7 @@ def main(dataset_name,
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1)
         imp_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, st_dataset.get_max_dim()-1, imp_mode)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, st_dataset.get_max_dim()-1)
-        sim_train_dataset = CombDataset(train_dataset, imp_train_dataset, True)
+        sim_train_dataset = CombDataset(train_dataset, imp_train_dataset, False)
 
         train_data_loader = DataLoader(sim_train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         #imp_train_data_loader = DataLoader(imp_train_dataset, batch_size=imp_bs, num_workers=8, pin_memory=True, shuffle=True,)
