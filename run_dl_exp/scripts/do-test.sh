@@ -10,7 +10,7 @@ ps=$4
 # Data set
 ds='pos'
 tr_part='trva'
-va_part='rnd_gt'
+va_part='rnd_gt.pos'
 ds_path='./'
 
 # Fixed parameter

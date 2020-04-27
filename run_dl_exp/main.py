@@ -135,7 +135,8 @@ def model_helper(data_pack, model, model_name, device, mode='wps'):
         if 'ffm' in model_name: #or 'dssm' in model_name:
             y = model(context, item, pos, value)
         else:
-            y = model(context, item, pos)
+            #y = model(context, item, pos)
+            raise
     else:
         #data, target, pos = data_pack
         #data, target = data.to(device, torch.long), target.to(device, torch.float)
@@ -245,7 +246,7 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
-                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
+                va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
