@@ -19,8 +19,8 @@ do
 	split -l ${num_tr} select_trva.${j}
 	mv xaa select_tr.${j}
 	mv xab select_va.${j}
-	if [ "$mode" == ".comb." ]; then
-		rm select_va.${j}
-		ln -sf ../der.${rnd_ratio}/select_va.${j} ./
-	fi
+	#if [ "$mode" == ".comb." ]; then
+	#	rm select_va.${j}
+	#	ln -sf ../der.${rnd_ratio}/select_va.${j} ./
+	#fi
 done
