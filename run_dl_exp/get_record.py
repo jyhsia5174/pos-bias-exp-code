@@ -13,7 +13,7 @@ with open(f_path, 'r') as f:
         if i+1 in va_num:
             logloss.append(line.strip().split(' ')[-2])
             auc.append(line.strip().split(' ')[-1])
-        if line.startswith(('ext', 'bi')):
+        if line.startswith(('ext', 'bi' ,'ff')):
             logloss.append(line.strip().split(' ')[-2])
             auc.append(line.strip().split(' ')[-1])
 

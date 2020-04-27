@@ -19,5 +19,5 @@ class ExtFFM(torch.nn.Module):
         ## merge
         x12 = torch.sum(x1*x2, dim=1)  # (batch_size,)
         x3 = torch.sum(self.embed2(x3), dim = 1)
-        out = torch.sigmoid(x12 + x3.squeeze(1))
+        out = torch.sigmoid(x12 + x3)
         return out

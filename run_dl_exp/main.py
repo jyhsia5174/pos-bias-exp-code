@@ -31,6 +31,9 @@ def mkdir_if_not_exist(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
+def merge_dims(t):
+    return t.view(tuple(-1 if i==0 else _s for i, _s in enumerate(t.size()[1:])))
+
 def hook(self, input, output):
     tmp = torch.sigmoid(output.data).flatten().tolist()
     ratio = [tmp[0]]
@@ -125,7 +128,8 @@ def model_helper(data_pack, model, model_name, device, mode='wps'):
     #        y = model(context, item)
     if model_name in ['ffm', 'biffm', 'extffm',]: # 'bidssm', 'extdssm', 'bixdfm', 'extxdfm']:
         context, item, target, pos, _, value = data_pack
-        context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+        #context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
+        context, item, target, pos, value = merge_dims(context.to(device, non_blocking=True)), merge_dims(item.to(device, non_blocking=True)), merge_dims(target.to(device, non_blocking=True)), merge_dims(pos.to(device, non_blocking=True)), merge_dims(value.to(device, non_blocking=True))
         if mode == 'wops':
             pos = torch.zeros_like(pos)
         elif mode == 'wps':
@@ -241,10 +245,17 @@ def main(dataset_name,
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
         model = get_model(model_name, train_dataset, embed_dim).to(device)
         criterion = torch.nn.BCELoss()
-        optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        if 'bi' in model_name or 'ext' in model_name:
+            optimizer = torch.optim.Adam(params=[
+                {'params': model.embed1.parameters()},
+                {'params': model.embed2.parameters(), 'weight_decay': 0.0}
+                ], lr=learning_rate, weight_decay=weight_decay)
+        else:
+            optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
+                #print(model.embed2.weight.data.t())
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
