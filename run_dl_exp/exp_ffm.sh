@@ -69,7 +69,6 @@ do
 			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.svm ${cdir}/${j}.svm
 		done
 		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-		mv ${cdir} ${cdir}.${model_name}
 	done
 done
 exit 0
