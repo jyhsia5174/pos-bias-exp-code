@@ -15,12 +15,12 @@ echo "model_name: ${model_name}, model_path: ${model_path}"
 task() {
 for i in '.' 
 do
-	for j in '' 'const.' 'pos.'
+	for j in '' #'const.' 'pos.'
 	do
 		va="${va_prefix}${i}${j}"
 		va=`echo ${va} | rev | cut -c 2- | rev`
 		cmd="python ../../main.py"
-		cmd="${cmd} --dataset_name pos"
+		cmd="${cmd} --dataset_name yh"
 		cmd="${cmd} --train_part trva"
 		cmd="${cmd} --valid_part ${va}" 
 		cmd="${cmd} --dataset_path ./"

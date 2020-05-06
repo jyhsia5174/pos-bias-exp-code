@@ -25,6 +25,7 @@ from src.model.bixdfm import BiExtremeDeepFactorizationMachineModel
 from src.model.extxdfm import ExtExtremeDeepFactorizationMachineModel
 from src.model.dfm import DeepFactorizationMachineModel
 from src.model.dcn import DeepCrossNetworkModel
+from src.model.naive_gan import Generator as G, Discriminator as D
 from utility import recommend
 
 
@@ -43,32 +44,6 @@ def hook(self, input, output):
     print(tmp)
     print(ratio, np.mean(ratio[1:]))
 
-#def collate_fn_for_lr(batch):
-#    data = [torch.LongTensor(np.hstack((i['item'], i['context']))) for i in batch]
-#    label = [i['label'] for i in batch]
-#    pos = [i['pos'] for i in batch]
-#    #if 0 in pos:
-#    #    print("The position padding_idx occurs!")
-#    #data.sort(key=lambda x: len(x), reverse=True)
-#    #data_length = [len(sq) for sq in data]
-#    data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
-#    return data, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
-#
-#def collate_fn_for_dssm(batch):
-#    context = [torch.LongTensor(i['context']) for i in batch]
-#    value = [torch.FloatTensor(i['value']) for i in batch]
-#    item = [torch.LongTensor(i['item']) for i in batch]
-#    label = [i['label'] for i in batch]
-#    pos = [i['pos'] for i in batch]
-#    #if 0 in pos:
-#    #    print("The position padding_idx occurs!")
-#    #data.sort(key=lambda x: len(x), reverse=True)
-#    #data_length = [len(sq) for sq in data]
-#    item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
-#    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-#    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
-#    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
-
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
         #return PositionDataset(path, data_prefix, True, max_dim, test_flag)
@@ -85,80 +60,31 @@ def get_model(name, dataset, embed_dim):
     Hyperparameters are empirically determined, not opitmized.
     """
     input_dims = dataset.max_dim
-    #if name == 'lr':
-    #    return LogisticRegression(input_dims)
-    #elif name == 'bilr':
-    #    return BiLogisticRegression(input_dims, dataset.pos_num)
-    #elif name == 'extlr':
-    #    return ExtLogisticRegression(input_dims, dataset.pos_num)
-    #elif name == 'dssm':
-    #    return DSSM(input_dims, embed_dim)
-    #elif name == 'bidssm':
-    #    return BiDSSM(input_dims, embed_dim, dataset.pos_num)
-    #elif name == 'extdssm':
-    #    return ExtDSSM(input_dims, embed_dim, dataset.pos_num)
     if name == 'ffm':
         return FFM(input_dims, embed_dim)
     elif name == 'biffm':
         return BiFFM(input_dims, dataset.pos_num, embed_dim)
     elif name == 'extffm':
         return ExtFFM(input_dims, dataset.pos_num, embed_dim)
-    #elif name == 'xdfm':
-    #    return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
-    #elif name == 'bixdfm':
-    #    return BiExtremeDeepFactorizationMachineModel(input_dims, dataset.pos_num, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
-    #elif name == 'extxdfm':
-    #    return ExtExtremeDeepFactorizationMachineModel(input_dims, dataset.pos_num, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
-    #elif name == 'dfm':
-    #    return DeepFactorizationMachineModel(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
-    #elif name == 'dcn':
-    #    return DeepCrossNetworkModel(input_dims, embed_dim=embed_dim, num_layers=3, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     else:
         raise ValueError('unknown model name: ' + name)
 
 
-def model_helper(data_pack, model, model_name, device, mode='wps'):
-    #if model_name in ['bilr', 'extlr']:
-    #    data, target, pos = data_pack
-    #    data, target, pos = data.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long)
-    #    y = model(data, pos)
-    #elif model_name in ['dssm', 'xdfm', 'dfm', 'dcn']:
-    #    context, item, target, pos, value = data_pack
-    #    context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
-    #    if model_name in ['xdfm', 'dssm']:
-    #        y = model(context, item, value)
-    #    else:
-    #        y = model(context, item)
-    if model_name in ['ffm', 'biffm', 'extffm',]: # 'bidssm', 'extdssm', 'bixdfm', 'extxdfm']:
-        context, item, target, pos, _, value = data_pack
-        context, item, target, pos, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), pos.to(device, torch.long), value.to(device, torch.float)
-        #context, item, target, pos, value = merge_dims(context.to(device, non_blocking=True)), merge_dims(item.to(device, non_blocking=True)), merge_dims(target.to(device, non_blocking=True)), merge_dims(pos.to(device, non_blocking=True)), merge_dims(value.to(device, non_blocking=True))
-        if mode == 'wops':
-            pos = torch.zeros_like(pos)
-        elif mode == 'wps':
-            pass
+def model_helper(data_pack, model, device, label=None):
+    context, item, target, _, _, value = data_pack
+    context, item, target, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), value.to(device, torch.float)
+    y = model(context, item, pos, value)
+    if label is not None:
+        if type(label) in (int, float):
+            target = torch.full(target.szie(), label)
         else:
-            raise(ValueError, "model_helper's mode %s is wrong!"%mode)
-        if 'ffm' in model_name: #or 'dssm' in model_name:
-            y = model(context, item, pos, value)
-        else:
-            #y = model(context, item, pos)
-            raise
-    else:
-        #data, target, pos = data_pack
-        #data, target = data.to(device, torch.long), target.to(device, torch.float)
-        #y = model(data)
-        raise
+            raise TypeError()
     return y, target
 
-def train(model, optimizer, data_loader, criterion, device, model_name, log_interval=1000):
+def train(model, optimizer, data_loader, criterion, device, model_name):
     model.train()
-    #handle = model.fc2.register_forward_hook(hook)
-    #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
-    #handle.remove()
     c = 0
     total_loss = 0
-    trloss = 0
     pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
     for i, tmp in enumerate(pbar):
         c+=1
@@ -168,24 +94,92 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-        trloss += loss.item()
-        if (i + 1) % log_interval == 0:
-            #print('    - loss:', total_loss / log_interval)
-            closs = total_loss/log_interval
-            pbar.set_postfix(loss=closs)
-            total_loss = 0
-    return trloss/c
+        pbar.set_postfix(loss=total_loss/c)
+    return total_loss/c
+
+def data_helper(data_pack, device):
+    context, item, target, _, _, value = data_pack
+    context, item, target, value = context.to(device, torch.long), item.to(device, torch.long), target.to(device, torch.float), value.to(device, torch.float)
+    return context, item, target, value
+
+def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_loader, full_data_loader, criterion_gan, criterion_sup, device, fix_D=True):
+    generator.train()
+    discriminator.train()
+    c = 0
+    total_g_loss1 = 0
+    total_g_loss2 = 0
+    total_d_loss = 0
+    
+    pbar = tqdm.tqdm(full_data_loader, smoothing=0, mininterval=1.0, ncols=100)
+    rnd_dl = iter(rnd_data_loader)
+    #det_dl = iter(det_data_loader)
+    #mix_dl = iter(mix_data_loader)
+
+    for i, full_batch in enumerate(pbar):
+        c+=1
+        try:
+            rnd_batch = next(rnd_dl)
+        except StopIteration:
+            rnd_dl = iter(rnd_data_loader)
+            rnd_batch = next(rnd_dl)
+
+        #det_batch = next(det_dl)
+        #mix_batch = next(mix_dl)
+
+
+        # -----------------
+        #  Train Generator
+        # -----------------
+        opt_G.zero_grad()
+        
+        cntx, item, y, val = data_helper(full_batch, device)
+        y_hat = generator(cntx, item, None, val)
+        weight = torch.zeros_like(y)
+        weight[y>=0] = 1.
+        criterion_sup = torch.nn.BCELoss(weight=weight)
+        loss1 = criterion_sup(y_hat, y)
+        #loss1.backward()
+
+        #y_hat[y>=0] = y[y>=0]  # y < 0 means missing label
+        #y_hat[y>=0] = y_hat[y>=0].detach()
+        v = torch.full(y.size(), 1.).to(device)
+        v_hat = discriminator(cntx, item, y_hat, None, val)
+        loss2 = criterion_gan(v_hat, v)
+        #loss2.backward()
+
+        total_g_loss1 += loss1.item()
+        total_g_loss2 += loss2.item()
+        g_loss = loss1 + loss2
+        g_loss.backward()
+
+        opt_G.step()
+        
+        # ---------------------
+        #  Train Discriminator
+        # ---------------------
+
+        if not fix_D:
+            opt_D.zero_grad()
+
+            rnd_cntx, rnd_item, rnd_y, rnd_val = data_helper(rnd_batch, device)
+            rnd_loss = criterion_gan(discriminator(rnd_cntx, rnd_item, rnd_y, None, rnd_val), torch.ones_like(rnd_y))
+            #det_cntx, det_item, det_y, det_val = data_helper(det_batch, device)
+            #det_loss = criterion_gan(discriminator(det_cntx, det_item, det_y, None, det_val), torch.zeros_like(det_y))
+            fake_loss = criterion_gan(discriminator(cntx, item, y_hat.detach(), None, val), torch.zeros_like(y))
+            d_loss = (rnd_loss + fake_loss) / 2. #+ det_loss)
+            total_d_loss += d_loss.item()
+            d_loss.backward()
+            opt_D.step()
+
+        pbar.set_postfix(g_loss1=total_g_loss1/c, g_loss2=total_g_loss2/c, d_loss=total_d_loss/c)
+    return total_g_loss1/c, total_g_loss2/c, total_d_loss/c
 
 def test(model, data_loader, device, model_name, mode='wps'):
     model.eval()
-    #handle = model.fc2.register_forward_hook(hook)
-    #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
-    #handle.remove()
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode)
-            #num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
@@ -209,10 +203,6 @@ def pred(model, data_loader, device, model_name, item_num):
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode='wops')
             num_of_user = y.size()[0]//item_num
-            #with open('dssm-unif.prob', 'a') as f:
-            #    y = y.tolist()
-            #    for j in range(num_of_user):
-            #        f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
             for j in range(len(rngs)):
                 fp = fs[j]
                 out = y*(bids[j, :].repeat(num_of_user))
@@ -241,10 +231,6 @@ def main(dataset_name,
          ps):
     mkdir_if_not_exist(save_dir)
     device = torch.device(device)
-    #if model_name in ['dssm', 'bidssm', 'extdssm', 'ffm', 'biffm', 'extffm', 'xdfm', 'dfm', 'dcn', 'bixdfm', 'extxdfm']:
-    #    collate_fn = collate_fn_for_dssm  # output data: [context, item, pos]
-    #else:
-    #    collate_fn = collate_fn_for_lr  # output data: [item+context, pos] 
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
@@ -262,14 +248,38 @@ def main(dataset_name,
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
-                #print(model.embed2.weight.data.t())
                 tr_logloss = train(model, optimizer, train_data_loader, criterion, device, model_name)
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
-                #print('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
-                #log.write('epoch:%d\ttr_logloss:%.6f\n'%(epoch_i, tr_logloss))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
+    elif flag == 'gan_train':
+        full_dataset = get_dataset(dataset_name, dataset_path, 'select_'+train_part, False, -1,'1')  # total set
+        det_dataset = get_dataset(dataset_name, dataset_path, 'det_'+train_part, False, -1, '0')  # S_c
+        rnd_dataset = get_dataset(dataset_name, dataset_path, 'random_'+train_part, False, -1, '0')  # S_t
+        full_data_loader = DataLoader(full_dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
+        det_data_loader = DataLoader(det_dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
+        rnd_data_loader = DataLoader(rnd_dataset, batch_size=batch_size//100, num_workers=4, pin_memory=True, shuffle=True)
+
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, -1, '0')
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=4, pin_memory=True)
+
+        gen = G(full_dataset.max_dim, embed_dim).to(device)
+        dis = D(full_dataset.max_dim, embed_dim).to(device)
+
+        criterion_gan = torch.nn.BCEWithLogitsLoss()
+        criterion_sup = torch.nn.BCELoss()
+
+        opt_G = torch.optim.Adam(params=gen.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        opt_D = torch.optim.Adam(params=dis.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
+        with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
+            for epoch_i in range(epoch):
+                g_loss1, g_loss2, d_loss = gan_train(gen, dis, opt_G, opt_D, rnd_data_loader, det_data_loader, full_data_loader, criterion_gan, criterion_sup, device, 0)
+                #va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
+                #print('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
+                #log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
+        #torch.save(model, f'{save_dir}/{model_file_name}.pt')
     elif flag == 'pred':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)

@@ -8,9 +8,9 @@ model_name=$3
 ps=$4
 
 # Data set
-ds='pos'
+ds='yh'
 tr_part='trva'
-va_part='rnd_gt.pos'
+va_part='rnd_gt'
 ds_path='./'
 
 # Fixed parameter

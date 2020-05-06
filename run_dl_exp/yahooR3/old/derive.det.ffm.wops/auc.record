@@ -1,0 +1,10 @@
+va_logloss va_auc
+1.500371 0.701142
+Reading data from ./trva.lmdb.
+(1000, 1)
+Totally 14874 contexts, 1000 items, 15875 dims, 176958 samples
+Reading data from ./rnd_gt.lmdb.
+(1000, 1)
+Totally 5400 contexts, 1000 items, 15998 dims, 48433 samples
+model logloss auc
+ffm 1.327676 0.656098
