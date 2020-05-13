@@ -26,12 +26,13 @@ for lp in log_paths:
                     records[lp][2] = auc
 
 if flag:
-    params = sorted(records.items(), key=lambda x: x[-1][-1], reverse=flag)[0]
+    params = sorted(records.items(), key=lambda x: x[-1][-1], reverse=flag)
 else:
-    params = sorted(records.items(), key=lambda x: x[-1][-2], reverse=flag)[0]
+    params = sorted(records.items(), key=lambda x: x[-1][-2], reverse=flag)
 
 #print(params)
-tmp = [float(i.split('-', 1)[-1]) for i in os.path.basename(params[0]).split('_')[1:5]]
+params = params[0]
+tmp = [float(i.split('-', 1)[-1]) for i in os.path.basename(params[0]).split('_')[1:6]]
 print(' '.join([str(i) for i in tmp + params[1]]))
 
 

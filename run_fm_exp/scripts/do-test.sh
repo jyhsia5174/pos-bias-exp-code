@@ -25,7 +25,7 @@ task(){
 
 for i in '.' 
 do
-	for j in '' 'const.' 'pos.'
+	for j in '' #'const.' 'pos.'
 	do
 		va="${va_prefix}${i}${j}ffm"
 		# Print out all parameter pair

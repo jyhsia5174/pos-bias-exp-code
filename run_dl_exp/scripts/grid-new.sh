@@ -6,6 +6,7 @@ gpu=$1
 mode=$2
 model_name=$3
 ps=$4
+imp_type=$5
 
 # Data set
 ds='yh'
@@ -14,10 +15,10 @@ va_part='va'
 ds_path='./'
 
 # Fixed parameter
-flag='train'
-epoch=20
+flag='new_train'
+epoch=15
 #bs=128
-#k=32
+k=32
 
 # others
 log_path="logs"
@@ -35,22 +36,24 @@ train_cmd="${train_cmd} --model_name ${model_name}"
 train_cmd="${train_cmd} --epoch ${epoch}"
 train_cmd="${train_cmd} --device ${device}"
 train_cmd="${train_cmd} --save_dir ${log_path}"
-#train_cmd="${train_cmd} --batch_size ${bs}"
+train_cmd="${train_cmd} --imp_type ${imp_type}"
 train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
 for lr in 0.001 #0.001 0.0001
 do
-    for wd in 1e-6 1e-7 1e-8 1e-9
+    for wd in 1e-7 1e-8 1e-9
     do
-        for k in 32
+        #for o in 0.00390625 0.015625 0.0625
+        for o in 0.25 1 4 0.00390625 0.015625 0.0625
         do
-			for bs in 32 128 512 2048 
+			for bs in 128 512 2048 
 			do
             	cmd="${train_cmd} --learning_rate ${lr}"
             	cmd="${cmd} --weight_decay ${wd}"
             	cmd="${cmd} --embed_dim ${k}"
 				cmd="${cmd} --batch_size ${bs}"
+				cmd="${cmd} --omega ${o}"
             	echo "${cmd}"
 			done
         done

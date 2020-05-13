@@ -41,7 +41,7 @@ class YHDataset(Dataset):
             self.max_ctx_num = np.frombuffer(txn.get(b'max_ctx_num'), dtype=np.int32)[0]
             self.max_item_num = np.frombuffer(txn.get(b'max_item_num'), dtype=np.int32)[0]
             #self.length = self.pos_num*(txn.stat()['entries'] - 6)//2 if self.read_flag == 1 else self.item_num*(txn.stat()['entries'] - 6)//2
-            if self.read_flag == '0':
+            if self.read_flag in ['0', '2']:
                 self.length = self.pos_cum_sum[-1] 
             else:
                 self.length = len(self.pos_cum_sum)*self.item_num
@@ -132,6 +132,7 @@ class YHDataset(Dataset):
 
     #@profile
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
+        obs_flag = -1
         if self.read_flag == '0':
             ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
             pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
@@ -145,17 +146,13 @@ class YHDataset(Dataset):
                 item = self.items[item_idx, :].astype(np.long)
                 ctx_idx = ctx_array[0, :].astype(np.long)  # context
                 ctx_value = ctx_array[1, :].copy()  # context
-                #print(item.shape, ctx_idx.shape, ctx_value.shape)
             pos += 1
-            #pos = np.arange(1, self.pos_num+1, dtype=np.long)
         elif self.read_flag == '1':
             ctx_idx, item_idx = divmod(idx, self.item_num)
             with self.env.begin(write=False) as txn:
                 item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
-                #print(item_array, ctx_array)
                 pos = np.where(item_array[0, :] == item_idx+1)[0]
-                #print('pos:', len(pos))
                 if len(pos) > 0:
                     pos = pos[0] + 1
                     flag = item_array[1, pos-1]
@@ -166,6 +163,33 @@ class YHDataset(Dataset):
                 item = self.items[item_idx, :].astype(np.long)
                 ctx_idx = ctx_array[0, :].astype(np.long)  # context
                 ctx_value = ctx_array[1, :].copy()  # context
+        elif self.read_flag == '2':
+            ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
+            pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
+            assert ctx_idx >= 0, "idx-%d invalid"%idx
+            with self.env.begin(write=False) as txn:
+                item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
+                item_idx = item_array[0, pos].astype(np.int32)
+                flag = item_array[1, pos]
+                if flag == 0:
+                    flag = 0
+                    obs_flag = 0
+                elif flag == 1:
+                    flag = 0
+                    obs_flag = 1
+                elif flag == 10:
+                    flag = 1
+                    obs_flag = 0
+                elif flag == 11:
+                    flag = 1
+                    obs_flag = 1
+                else:
+                    raise ValueError('Wrong labels: %d!'%flag)
+                item = self.items[item_idx, :].astype(np.long)
+                ctx_idx = ctx_array[0, :].astype(np.long)  # context
+                ctx_value = ctx_array[1, :].copy()  # context
+            pos += 1
         #elif self.read_flag == 2:
         #    #context_idx, item_idx = divmod(idx, self.item_num)
         #    with self.env.begin(write=False) as txn:
@@ -202,13 +226,13 @@ class YHDataset(Dataset):
         #    flags = np.ones(self.pos_num)*-1
         #    pos = np.zeros(self.pos_num)
         else:
-            raise ValueError('Wrong flag for reading data'%self.read_flag)
+            raise ValueError('Wrong flag for reading data: %s'%self.read_flag)
         if self.tr_max_dim > 0:
             ctx_idx[ctx_idx > self.tr_max_dim] = 0
             ctx_value[ctx_idx > self.tr_max_dim] = 0
 
         #if self.read_flag == 0:
-        return ctx_idx, item, flag, pos, item_idx, ctx_value  # pos \in {1,2,...9,10}, 0 for no-position
+        return ctx_idx, item, flag, pos, item_idx, ctx_value, obs_flag  # pos \in {1,2,...9,10}, 0 for no-position
         #elif self.read_flag == 1:
         #    return np.tile(ctx_idx, (self.item_num, 1)), items, flags, pos, item_idxes, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
         #elif self.read_flag == 2:

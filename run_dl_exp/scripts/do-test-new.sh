@@ -6,20 +6,22 @@ gpu=$1
 mode=$2
 model_name=$3
 ps=$4
+imp_type=$5
 
 # Data set
 ds='yh'
-#tr_part='trva'
+tr_part='trva'
 va_part='rnd_gt'
 ds_path='./'
 
 # Fixed parameter
-flag='train'
+flag='new_train'
 lr=`python select_params.py logs ${mode} | cut -d' ' -f1`
 wd=`python select_params.py logs ${mode} | cut -d' ' -f2`
 bs=`python select_params.py logs ${mode} | cut -d' ' -f3` 
 k=`python select_params.py logs ${mode} | cut -d' ' -f4`
-epoch=`python select_params.py logs ${mode} | cut -d' ' -f5`
+o=`python select_params.py logs ${mode} | cut -d' ' -f5`
+epoch=`python select_params.py logs ${mode} | cut -d' ' -f6`
 epoch=$((${epoch}+1))
 
 # others 
@@ -30,7 +32,7 @@ task(){
 # Set up fixed parameter and train command
 cmd="python ../../main.py"
 cmd="${cmd} --dataset_name ${ds}"
-cmd="${cmd} --train_part $1"
+cmd="${cmd} --train_part ${tr_part}"
 cmd="${cmd} --valid_part ${va_part}"
 cmd="${cmd} --dataset_path ${ds_path}"
 cmd="${cmd} --flag ${flag}"
@@ -39,7 +41,9 @@ cmd="${cmd} --epoch ${epoch}"
 cmd="${cmd} --device ${device}"
 cmd="${cmd} --save_dir ${log_path}"
 cmd="${cmd} --batch_size ${bs}"
+cmd="${cmd} --omega ${o}"
 cmd="${cmd} --ps ${ps}"
+cmd="${cmd} --imp_type ${imp_type}"
 cmd="${cmd} --learning_rate ${lr}"
 cmd="${cmd} --weight_decay ${wd}"
 cmd="${cmd} --embed_dim ${k}"
@@ -49,12 +53,10 @@ echo "${cmd}"
 
 # Check command
 echo "Check command list (the command may not be runned!!)"
-task 'trva'
-task 'tr'
+task
 #wait
 
 
 # Run
 echo "Run"
-task 'trva'| xargs -0 -d '\n' -P 1 -I {} sh -c {}
-task 'tr'| xargs -0 -d '\n' -P 1 -I {} sh -c {}
+task | xargs -0 -d '\n' -P 1 -I {} sh -c {}

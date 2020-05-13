@@ -37,6 +37,7 @@ build/
 #data
 #data/*
 kkbox.*
+yahoo*
 ob.*
 Pva*
 Qva*

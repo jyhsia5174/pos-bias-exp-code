@@ -14,7 +14,7 @@ va_part='va'
 ds_path='./'
 
 # Fixed parameter
-flag='train'
+flag='obs_train'
 epoch=20
 #bs=128
 #k=32
@@ -25,7 +25,7 @@ device="cuda:${gpu}"
 
 task(){
 # Set up fixed parameter and train command
-train_cmd="python ../../main.py"
+train_cmd="python ../../gan_main.py"
 train_cmd="${train_cmd} --dataset_name ${ds}"
 train_cmd="${train_cmd} --train_part ${tr_part}"
 train_cmd="${train_cmd} --valid_part ${va_part}"

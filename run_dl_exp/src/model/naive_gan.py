@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.nn.functional as F
 
 class Generator(torch.nn.Module):
@@ -7,12 +8,13 @@ class Generator(torch.nn.Module):
         self.inputSize = inputSize
         self.embed1 = torch.nn.Embedding(inputSize, embed_dim, padding_idx=0)  
         torch.nn.init.xavier_uniform_(self.embed1.weight.data[1:, :])
+        #torch.nn.init.uniform_(self.embed1.weight.data[1:, :], 0, 1./np.sqrt(self.inputSize*1.))
 
 
     def forward(self, ctx, itm, pos, ctx_v):  # ctx: context, itm: item, x3: position, ctx_v: context value
         if not self.training:  # ignore one-hot feature never seen in training phase
-            ctx[ctx>self.inputSize] = 0
-            ctx_v[ctx>self.inputSize] = 0
+            ctx[ctx>=self.inputSize] = 0
+            ctx_v[ctx>=self.inputSize] = 0
         ctx = torch.sum(torch.mul(self.embed1(ctx), ctx_v.unsqueeze(2)), dim=1)  # field 1 embedding for cxt: (batch_size, cxt_nonzero_feature_num, embed_dim)
         itm = torch.sum(self.embed1(itm), dim=1)  # field 1 embedding for item: (batch_size, item_nonzero_feature_num, embed_dim)
 

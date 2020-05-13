@@ -76,32 +76,32 @@ run_exp_imp(){
 
 set -e
 exp_dir=`basename ${data_path}`
-for i in 'det' 'random'
-do
-	if [ "${part}" != 'all' ]; then
-		if [ "${part}" != "derive.$i" ]; then
-			continue
-		fi
-	fi
-	cdir=${exp_dir}/derive.${i}
-	mkdir -p ${cdir}
-	ln -sf ${root}/scripts/init.sh ${cdir}
-	ln -sf ${root}/scripts/grid.sh ${cdir}
-	ln -sf ${root}/scripts/do-test.sh ${cdir}
-	ln -sf ${root}/scripts/select_params.py ${cdir}
-	ln -sf ${root}/hybrid-ocffm/train ${cdir}/hytrain
-	ln -sf ${root}/${data_path}/derive/*gt*ffm ${cdir}
-	ln -sf ${root}/${data_path}/derive/item.ffm ${cdir}
-	for j in 'trva' 'tr' 'va'
-	do
-		ln -sf ${root}/${data_path}/derive/${i}_${j}.ffm ${cdir}/${j}.ffm
-	done
-	run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-done
+#for i in 'det' 'random'
+#do
+#	if [ "${part}" != 'all' ]; then
+#		if [ "${part}" != "derive.$i" ]; then
+#			continue
+#		fi
+#	fi
+#	cdir=${exp_dir}/derive.${i}
+#	mkdir -p ${cdir}
+#	ln -sf ${root}/scripts/init.sh ${cdir}
+#	ln -sf ${root}/scripts/grid.sh ${cdir}
+#	ln -sf ${root}/scripts/do-test.sh ${cdir}
+#	ln -sf ${root}/scripts/select_params.py ${cdir}
+#	ln -sf ${root}/hybrid-ocffm/train ${cdir}/hytrain
+#	ln -sf ${root}/${data_path}/derive/*gt*ffm ${cdir}
+#	ln -sf ${root}/${data_path}/derive/item.ffm ${cdir}
+#	for j in 'trva' 'tr' 'va'
+#	do
+#		ln -sf ${root}/${data_path}/derive/${i}_${j}.ffm ${cdir}/${j}.ffm
+#	done
+#	run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+#done
 
-for i in '.comb.' '.'
+for i in '.comb.' #'.'
 do 
-	for k in 0.01 0.1
+	for k in 0.01 #0.1
 	do 
 		if [ "${part}" != 'all' ]; then
 			if [ "${part}" != "der${i}${k}" ]; then
@@ -124,7 +124,7 @@ do
 		run_exp ${cdir} ${root} ${mode} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
-
+exit 0
 for imp_type in 'pw' #'avg'
 do
 	for i in '.comb.' 

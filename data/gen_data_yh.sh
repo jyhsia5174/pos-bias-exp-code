@@ -13,6 +13,7 @@ ln -sf ../origin/va.1.remap random_va.ffm
 ln -sf ../origin/va.1.remap det_va.ffm
 ln -sf ../origin/te.1.remap rnd_gt.ffm
 ln -sf ../../scripts/ocffm-to-ocsvm.py ./
+ln -sf ../../scripts/ctr.py ./
 
 ln -sf ../origin/tr.1.remap random_tr.ffm
 ln -sf ../origin/trva.1.remap random_trva.ffm
@@ -22,6 +23,7 @@ ln -sf ../origin/tr.100.remap select_tr.ffm
 ln -sf ../origin/trva.100.remap select_trva.ffm
 
 python ocffm-to-ocsvm.py item.ffm det_tr.ffm det_trva.ffm det_va.ffm select_tr.ffm select_trva.ffm random_tr.ffm random_trva.ffm random_va.ffm rnd_gt.ffm 
+python ctr.py
 
 cd ../
 mkdir der.comb.0.01

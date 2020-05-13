@@ -14,7 +14,7 @@ va_part='rnd_gt'
 ds_path='./'
 
 # Fixed parameter
-flag='train'
+flag='obs_train'
 lr=`python select_params.py logs ${mode} | cut -d' ' -f1`
 wd=`python select_params.py logs ${mode} | cut -d' ' -f2`
 bs=`python select_params.py logs ${mode} | cut -d' ' -f3` 
@@ -28,7 +28,7 @@ device="cuda:${gpu}"
 
 task(){
 # Set up fixed parameter and train command
-cmd="python ../../main.py"
+cmd="python ../../gan_main.py"
 cmd="${cmd} --dataset_name ${ds}"
 cmd="${cmd} --train_part $1"
 cmd="${cmd} --valid_part ${va_part}"
@@ -50,11 +50,11 @@ echo "${cmd}"
 # Check command
 echo "Check command list (the command may not be runned!!)"
 task 'trva'
-task 'tr'
+task 'full'
 #wait
 
 
 # Run
 echo "Run"
-task 'trva'| xargs -0 -d '\n' -P 1 -I {} sh -c {}
-task 'tr'| xargs -0 -d '\n' -P 1 -I {} sh -c {}
+task 'trva' | xargs -0 -d '\n' -P 1 -I {} sh -c {}
+task 'full' | xargs -0 -d '\n' -P 1 -I {} sh -c {}
