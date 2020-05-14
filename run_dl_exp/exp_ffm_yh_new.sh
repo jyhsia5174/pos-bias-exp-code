@@ -37,8 +37,8 @@ mn='ffm'
 for i in '.comb.0.01' 
 do 
 	#for imp_type in 'r' #'item-r' #'complex'
-	for imp_type in 'item-r' #'complex'
-	#for imp_type in 'complex'
+	#for imp_type in 'item-r' #'complex'
+	for imp_type in 'complex'
 	do 
 		cdir=${exp_dir}/der${i}.new-${imp_type}.${mn}.${ps}
 		mkdir -p ${cdir}

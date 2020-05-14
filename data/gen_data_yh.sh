@@ -4,7 +4,7 @@ yh_remap_dir=$1
 
 mkdir yahooR3
 cd yahooR3
-ln -sf $1 origin
+ln -sf $PWD/../$1 origin
 mkdir derive
 cd derive
 
