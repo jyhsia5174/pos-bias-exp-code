@@ -383,7 +383,7 @@ def main(dataset_name,
         full_dataset = get_dataset(dataset_name, dataset_path, 'select_'+train_part, False, -1, '1')  # total set
         det_dataset = get_dataset(dataset_name, dataset_path, 'det_'+train_part, False, -1, '0')  # S_c
         rnd_dataset = get_dataset(dataset_name, dataset_path, 'random_'+train_part, False, -1, '0')  # S_t
-        full_data_loader = DataLoader(full_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
+        full_data_loader = DataLoader(full_dataset, batch_size=batch_size*100, num_workers=8, pin_memory=True, shuffle=True)
         det_data_loader = DataLoader(det_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
         rnd_data_loader = DataLoader(rnd_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True)
 
@@ -392,7 +392,7 @@ def main(dataset_name,
 
         gen = G(full_dataset.max_dim, embed_dim).to(device)
         #dis = D(full_dataset.max_dim, embed_dim).to(device)
-        dis = torch.load('../der.comb.0.01.ffm.obs.wops/test-score.auc/ffm_lr-0.001_l2-1e-07_bs-32_k-32_%s.pt'%train_part).to(device)
+        dis = torch.load('./dis_trva.pt').to(device)
 
         opt_G = torch.optim.Adam(params=gen.parameters(), lr=learning_rate, weight_decay=weight_decay, )#amsgrad=True)
         opt_D = torch.optim.Adam(params=dis.parameters(), lr=learning_rate, weight_decay=weight_decay, )#amsgrad=True)
@@ -405,7 +405,7 @@ def main(dataset_name,
                 va_auc, va_logloss = test(gen, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
                 log.write('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
-        #torch.save(model, f'{save_dir}/{model_file_name}.pt')
+        torch.save(gen, f'{save_dir}/{model_file_name}.pt')
     elif flag == 'pred':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)
