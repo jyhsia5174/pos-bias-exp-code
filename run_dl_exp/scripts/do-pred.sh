@@ -7,7 +7,7 @@ mode=$2
 ps=$3
 va_prefix="rnd_gt"
 root="test-score.${mode}"
-model_path=`find ${root} -name "*.pt"`
+model_path=`find ${root} -name "*trva.pt"`
 #model_name=`echo ${model_path} | cut -d'/' -f2 | cut -d'_' -f1`
 model_name=`echo $(basename ${model_path}) | cut -d'_' -f1`
 echo "model_name: ${model_name}, model_path: ${model_path}"

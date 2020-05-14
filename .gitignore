@@ -1,4 +1,5 @@
 *.ffm
+*.record
 *.svm
 *.csv
 *.swp
@@ -34,8 +35,6 @@ build/
 *.prob*
 
 # data 
-#data
-#data/*
 kkbox.*
 yahoo*
 ob.*

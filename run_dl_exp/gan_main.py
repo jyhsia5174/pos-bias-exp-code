@@ -137,7 +137,7 @@ def new_train(model, imp_model, optimizer, data_loader, imp_data_loader, imp_typ
         weight[imp_y<0] = 1.
 
         y_hat = model(cntx, item, None, val)
-        loss1 = criterion(y_hat, y)
+        loss1 = criterion(y_hat, y)   # bcewithlogit
         
         if imp_type == 'r':
             imp_y = imp_y.fill_(imp_model)
@@ -197,11 +197,11 @@ def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_
         weight[y>=0] = 1.
 
         y_hat = generator(cntx, item, None, val)
-        criterion_sup = torch.nn.BCELoss(weight=weight, reduction='sum')
+        criterion_sup = torch.nn.BCEWithLogitsLoss(weight=weight, reduction='sum')
         loss1 = criterion_sup(y_hat, y) / weight.sum()
         #loss1.backward()
 
-        v_hat = discriminator(cntx, item, y_hat, None, val)
+        v_hat = discriminator(cntx, item, torch.sigmoid(y_hat), None, val)
         criterion_gan = torch.nn.BCEWithLogitsLoss(weight=1.-weight, reduction='sum')
         loss2 = criterion_gan(v_hat, v) / (1.-weight).sum()
         #loss2.backward()
@@ -220,11 +220,12 @@ def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_
         if not fix_D:
             opt_D.zero_grad()
 
+            fake_loss = criterion_gan(discriminator(cntx, item, torch.sigmoid(y_hat).detach(), None, val), torch.zeros_like(y)) / (1.-weight).sum()
+
             rnd_cntx, rnd_item, rnd_y, rnd_val, _ = data_helper(rnd_batch, device)
+            criterion_gan = torch.nn.BCEWithLogitsLoss()
             rnd_loss = criterion_gan(discriminator(rnd_cntx, rnd_item, rnd_y, None, rnd_val), torch.ones_like(rnd_y))
-            #det_cntx, det_item, det_y, det_val, _ = data_helper(det_batch, device)
-            #det_loss = criterion_gan(discriminator(det_cntx, det_item, det_y, None, det_val), torch.zeros_like(det_y))
-            fake_loss = criterion_gan(discriminator(cntx, item, y_hat.detach(), None, val), torch.zeros_like(y))
+
             d_loss = (rnd_loss + fake_loss) / 2. #+ det_loss)
             total_d_loss += d_loss.item()
             d_loss.backward()
@@ -239,7 +240,7 @@ def test(model, data_loader, device, model_name, mode='wps'):
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, device)
-            #y = torch.sigmoid(y)
+            y = torch.sigmoid(y)
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
@@ -251,6 +252,7 @@ def obs_test(model, data_loader, device, mode='wps'):
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             cntx, item, y, val, v = data_helper(tmp, device)
             v_hat = model(cntx, item, y, None, val)
+            v_hat = torch.sigmoid(v_hat)
             targets.extend(torch.flatten(v.to(torch.int)).tolist())
             predicts.extend(torch.flatten(v_hat).tolist())
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
@@ -310,7 +312,7 @@ def main(dataset_name,
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
         #model = get_model(model_name, train_dataset, embed_dim).to(device)
         model = G(train_dataset.max_dim, embed_dim).to(device)
-        criterion = torch.nn.BCELoss()
+        criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
@@ -359,7 +361,7 @@ def main(dataset_name,
             item_r[item_r < 1e-8] = r
             imp_model = np.log(item_r/(1-item_r))
             print('logit:', max(imp_model), min(imp_model))
-            imp_model = torch.tensor(item_r).to(device, torch.float)
+            imp_model = torch.tensor(imp_model).to(device, torch.float)
         elif imp_type == 'complex':
             imp_model = torch.load('imp_%s.pt'%train_part, map_location=device)
             imp_model.eval()
@@ -372,7 +374,6 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 logloss, mseloss = new_train(model, imp_model, optimizer, train_data_loader, imp_train_data_loader, imp_type, device, omega)
-                #va_auc, va_logloss = test(model, valid_data_loader, device, 'wps')
                 va_auc, va_logloss = test(model, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\ttr_logloss:%.6f\ttr_mseloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, logloss, mseloss, va_auc, va_logloss))
                 log.write('epoch:%d\ttr_logloss:%.6f\ttr_mseloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, logloss, mseloss, va_auc, va_logloss))
@@ -392,9 +393,6 @@ def main(dataset_name,
         gen = G(full_dataset.max_dim, embed_dim).to(device)
         #dis = D(full_dataset.max_dim, embed_dim).to(device)
         dis = torch.load('../der.comb.0.01.ffm.obs.wops/test-score.auc/ffm_lr-0.001_l2-1e-07_bs-32_k-32_%s.pt'%train_part).to(device)
-
-        #criterion_gan = torch.nn.BCEWithLogitsLoss()
-        #criterion_sup = torch.nn.BCELoss()
 
         opt_G = torch.optim.Adam(params=gen.parameters(), lr=learning_rate, weight_decay=weight_decay, )#amsgrad=True)
         opt_D = torch.optim.Adam(params=dis.parameters(), lr=learning_rate, weight_decay=weight_decay, )#amsgrad=True)

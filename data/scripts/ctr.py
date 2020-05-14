@@ -17,8 +17,8 @@ for line in open(rnd_tr):
     line = line.strip().split(' ', 1)
     for l in line[0].split(','):
         idx, click = l.split(':')
-        stats[0, int(idx)-1] += int(click)
-        stats[1, int(idx)-1] += 1
+        stats[0, int(idx)] += int(click)
+        stats[1, int(idx)] += 1
 np.save('rnd_stats_tr.npy', stats)
 
 stats = np.zeros((2, item_num))
@@ -26,8 +26,8 @@ for line in open(rnd_trva):
     line = line.strip().split(' ', 1)
     for l in line[0].split(','):
         idx, click = l.split(':')
-        stats[0, int(idx)-1] += int(click)
-        stats[1, int(idx)-1] += 1
+        stats[0, int(idx)] += int(click)
+        stats[1, int(idx)] += 1
 np.save('rnd_stats_trva.npy', stats)
 
 det_stats = np.zeros((2, item_num))
@@ -35,8 +35,8 @@ for line in open(det_trva):
     line = line.strip().split(' ', 1)
     for l in line[0].split(','):
         idx, click = l.split(':')
-        det_stats[0, int(idx)-1] += int(click)
-        det_stats[1, int(idx)-1] += 1
+        det_stats[0, int(idx)] += int(click)
+        det_stats[1, int(idx)] += 1
 
 label = []
 for line in open(te):

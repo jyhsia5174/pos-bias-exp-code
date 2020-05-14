@@ -75,7 +75,7 @@ class YHDataset(Dataset):
                 for line in pbar:
                     line = line.strip()
                     for _num, j in enumerate(line.split(' ')):
-                        items[i, _num] = int(j.split(':')[0])
+                        items[i, _num] = int(j.split(':')[0])  # item_idx(start from 0) : item feature
                     i += 1
             items = items[:i, :]
             #print(items.shape)

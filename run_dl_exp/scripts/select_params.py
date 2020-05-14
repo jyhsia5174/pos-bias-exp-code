@@ -30,9 +30,9 @@ if flag:
 else:
     params = sorted(records.items(), key=lambda x: x[-1][-2], reverse=flag)
 
-#print(params)
+print(params)
 params = params[0]
-tmp = [float(i.split('-', 1)[-1]) for i in os.path.basename(params[0]).split('_')[1:6]]
+tmp = [float(i.split('-', 1)[-1]) for i in os.path.basename(params[0]).split('_')[1:-1]]
 print(' '.join([str(i) for i in tmp + params[1]]))
 
 

@@ -21,7 +21,7 @@ class Generator(torch.nn.Module):
         ## merge
         x12 = torch.sum(ctx*itm, dim=1)  # (batch_size,)
         #print('G size', x12.size())
-        return torch.sigmoid(x12)
+        return x12
 
 class Discriminator(torch.nn.Module):
     def __init__(self, inputSize, embed_dim):

@@ -48,25 +48,25 @@ run_obs_exp(){
 set -e
 exp_dir=`basename ${data_path}`
 
-for mn in 'ffm'
-do
-	for i in 'det' 'random'
-	do
-		cdir=${exp_dir}/derive.${i}.${mn}.${ps}
-		mkdir -p ${cdir}
-		ln -sf ${root}/scripts/*.sh ${cdir}
-		ln -sf ${root}/scripts/*.py ${cdir}
-		ln -sf ${root}/${data_path}/derive/*gt*svm ${cdir}
-		ln -sf ${root}/${data_path}/derive/item.svm ${cdir}
-		ln -sf ${root}/${data_path}/derive/truth.svm ${cdir}
-		for j in 'trva' 'tr' 'va'
-		do
-			ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
-		done
-		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-	done
-done
-exit 0
+#for mn in 'ffm'
+#do
+#	for i in 'det' 'random'
+#	do
+#		cdir=${exp_dir}/derive.${i}.${mn}.${ps}
+#		mkdir -p ${cdir}
+#		ln -sf ${root}/scripts/*.sh ${cdir}
+#		ln -sf ${root}/scripts/*.py ${cdir}
+#		ln -sf ${root}/${data_path}/derive/*gt*svm ${cdir}
+#		ln -sf ${root}/${data_path}/derive/item.svm ${cdir}
+#		ln -sf ${root}/${data_path}/derive/truth.svm ${cdir}
+#		for j in 'trva' 'tr' 'va'
+#		do
+#			ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
+#		done
+#		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+#	done
+#done
+#exit 0
 
 mn='ffm'
 for i in '.comb.' 
@@ -87,7 +87,7 @@ do
 		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
-
+exit 0
 mn='ffm'
 for i in '.comb.' 
 do 
