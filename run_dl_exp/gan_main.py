@@ -27,6 +27,7 @@ from src.model.dfm import DeepFactorizationMachineModel
 from src.model.dcn import DeepCrossNetworkModel
 from src.model.naive_gan import Generator as G, Discriminator as D
 from utility import recommend
+from torch.distributions.bernoulli import Bernoulli
 
 
 def mkdir_if_not_exist(path):
@@ -201,9 +202,11 @@ def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_
         loss1 = criterion_sup(y_hat, y) / weight.sum()
         ##loss1.backward()
 
-        v_hat = discriminator(cntx, item, torch.sigmoid(y_hat), None, val)
-        criterion_gan = torch.nn.BCEWithLogitsLoss(weight=1.-weight, reduction='sum')
-        loss2 = criterion_gan(v_hat, v) / (1.-weight).sum()
+        m = Bernoulli(probs=None, logits=y_hat, validate_args=None)
+        y_hat_action = m.sample()
+        v_hat = discriminator(cntx, item, torch.sigmoid(y_hat_action), None, val)
+        criterion_gan = torch.nn.BCEWithLogitsLoss(weight=1.-weight, reduction='none')
+        loss2 = (m.log_prob(y_hat_action) * criterion_gan(v_hat, v)).sum() / (1.-weight).sum()
         #loss2.backward()
 
         total_g_loss1 += loss1.item()
