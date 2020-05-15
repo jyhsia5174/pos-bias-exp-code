@@ -46,5 +46,6 @@ for line in open(te):
 
 rnd_pctr = stats.sum(axis=1)[0]/stats.sum(axis=1)[1]
 det_pctr = det_stats.sum(axis=1)[0]/det_stats.sum(axis=1)[1]
+print("rnd_pctr_trva:%f, det_pctr_trva:%f"%(rnd_pctr, det_pctr))
 print('avg_st auc-%.4f logloss-%.4f'%(roc_auc_score(label, np.ones_like(label)*rnd_pctr), log_loss(label, np.ones_like(label)*rnd_pctr)))
 print('avg_sc auc-%.4f logloss-%.4f'%(roc_auc_score(label, np.ones_like(label)*det_pctr), log_loss(label, np.ones_like(label)*det_pctr)))

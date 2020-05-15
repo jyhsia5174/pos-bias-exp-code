@@ -176,11 +176,11 @@ def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_
 
     for i, full_batch in enumerate(pbar):
         c+=1
-        #try:
-        #    rnd_batch = next(rnd_dl)
-        #except StopIteration:
-        #    rnd_dl = iter(rnd_data_loader)
-        #    rnd_batch = next(rnd_dl)
+        try:
+            rnd_batch = next(rnd_dl)
+        except StopIteration:
+            rnd_dl = iter(rnd_data_loader)
+            rnd_batch = next(rnd_dl)
 
         #det_batch = next(det_dl)
         #mix_batch = next(mix_dl)
@@ -199,7 +199,7 @@ def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_
         y_hat = generator(cntx, item, None, val)
         criterion_sup = torch.nn.BCEWithLogitsLoss(weight=weight, reduction='sum')
         loss1 = criterion_sup(y_hat, y) / weight.sum()
-        #loss1.backward()
+        ##loss1.backward()
 
         v_hat = discriminator(cntx, item, torch.sigmoid(y_hat), None, val)
         criterion_gan = torch.nn.BCEWithLogitsLoss(weight=1.-weight, reduction='sum')
@@ -243,6 +243,7 @@ def test(model, data_loader, device, model_name, mode='wps'):
             y = torch.sigmoid(y)
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
+    print("avg pred: %f, avg target: %f"%(np.mean(predicts), np.mean(targets)))
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 def obs_test(model, data_loader, device, mode='wps'):
@@ -255,6 +256,7 @@ def obs_test(model, data_loader, device, mode='wps'):
             v_hat = torch.sigmoid(v_hat)
             targets.extend(torch.flatten(v.to(torch.int)).tolist())
             predicts.extend(torch.flatten(v_hat).tolist())
+    print("avg pred: %f, avg target: %f"%(np.mean(predicts), np.mean(targets)))
     return roc_auc_score(targets, predicts), log_loss(targets, predicts)
 
 def pred(model, data_loader, device, model_name, item_num):
@@ -401,7 +403,7 @@ def main(dataset_name,
                                                 train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
-                g_loss1, g_loss2, d_loss = gan_train(gen, dis, opt_G, opt_D, rnd_data_loader, det_data_loader, full_data_loader, device, omega, 1)
+                g_loss1, g_loss2, d_loss = gan_train(gen, dis, opt_G, opt_D, rnd_data_loader, det_data_loader, full_data_loader, device, omega, 0)
                 va_auc, va_logloss = test(gen, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
                 log.write('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
@@ -415,12 +417,22 @@ def main(dataset_name,
         model = torch.load(model_path).to(device)
         pred(model, valid_data_loader, device, model_name, item_num)
     elif flag == 'test_auc':
-        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
-        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1)
+        #train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, - 1)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
         #print(device)
         model = torch.load(model_path, map_location=device)
         va_auc, va_logloss = test(model, valid_data_loader, device, model_name, ps)
+        print("model logloss auc")
+        print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
+        #pred(model, valid_data_loader, device, model_name, item_num)
+    elif flag == 'obs_test_auc':
+        #train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, - 1, '2')
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        #print(device)
+        model = torch.load(model_path, map_location=device)
+        va_auc, va_logloss = obs_test(model, valid_data_loader, device, 'wps')
         print("model logloss auc")
         print("%s %.6f %.6f"%(model_name, va_logloss, va_auc))
         #pred(model, valid_data_loader, device, model_name, item_num)

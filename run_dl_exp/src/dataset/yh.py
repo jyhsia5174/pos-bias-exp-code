@@ -132,7 +132,7 @@ class YHDataset(Dataset):
 
     #@profile
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
-        obs_flag = -1
+        obs_flag = -1  # for unobs_data, label is -1; for obs_data, 1 for rnd, 0 for det 
         if self.read_flag == '0':
             ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
             pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
@@ -172,10 +172,10 @@ class YHDataset(Dataset):
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
                 item_idx = item_array[0, pos].astype(np.int32)
                 flag = item_array[1, pos]
-                if flag == 0:
+                if flag == 0: #00
                     flag = 0
                     obs_flag = 0
-                elif flag == 1:
+                elif flag == 1:  #01
                     flag = 0
                     obs_flag = 1
                 elif flag == 10:
