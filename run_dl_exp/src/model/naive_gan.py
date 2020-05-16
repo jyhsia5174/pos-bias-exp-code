@@ -31,6 +31,8 @@ class Generator_Z(torch.nn.Module):
         self.fc1 = torch.nn.Linear(embed_dim*2, embed_dim)
         self.fc2 = torch.nn.Linear(embed_dim, 1)
         torch.nn.init.xavier_uniform_(self.embed1.weight.data[1:, :])
+        torch.nn.init.xavier_uniform_(self.fc1.weight.data)
+        torch.nn.init.xavier_uniform_(self.fc2.weight.data)
         #torch.nn.init.uniform_(self.embed1.weight.data[1:, :], 0, 1./np.sqrt(self.inputSize*1.))
 
 
