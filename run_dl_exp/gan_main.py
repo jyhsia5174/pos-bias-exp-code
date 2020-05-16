@@ -223,7 +223,11 @@ def gan_train(generator, discriminator, opt_G, opt_D, rnd_data_loader, det_data_
         if not fix_D:
             opt_D.zero_grad()
 
-            fake_loss = criterion_gan(discriminator(cntx, item, torch.sigmoid(y_hat).detach(), None, val), torch.zeros_like(y)) / (1.-weight).sum()
+            m = Bernoulli(probs=None, logits=y_hat.detach(), validate_args=None)
+            y_hat_action = m.sample()
+            fake_loss = criterion_gan(discriminator(cntx, item, y_hat_action, None, val), torch.zeros_like(y)) 
+            fake_loss = (m.log_prob(y_hat_action) * fake_loss).sum()/ (1.-weight).sum()
+            #fake_loss = criterion_gan(discriminator(cntx, item, torch.sigmoid(y_hat).detach(), None, val), torch.zeros_like(y)) / (1.-weight).sum()
 
             rnd_cntx, rnd_item, rnd_y, rnd_val, _ = data_helper(rnd_batch, device)
             criterion_gan = torch.nn.BCEWithLogitsLoss()
@@ -406,7 +410,7 @@ def main(dataset_name,
                                                 train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
-                g_loss1, g_loss2, d_loss = gan_train(gen, dis, opt_G, opt_D, rnd_data_loader, det_data_loader, full_data_loader, device, omega, 1)
+                g_loss1, g_loss2, d_loss = gan_train(gen, dis, opt_G, opt_D, rnd_data_loader, det_data_loader, full_data_loader, device, omega, 0)
                 va_auc, va_logloss = test(gen, valid_data_loader, device, model_name, 'wps')
                 print('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
                 log.write('epoch:%d\tg_sup_loss:%.6f\tg_gan_loss:%.6f\td_loss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, g_loss1, g_loss2, d_loss, va_auc, va_logloss))
