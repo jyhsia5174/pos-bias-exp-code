@@ -46,7 +46,7 @@ class Generator_Z(torch.nn.Module):
         x12 = F.relu(x12)
         x12 = self.fc2(x12)  # (batch_size,)
         #print('G size', x12.size())
-        return x12
+        return x12.unsqueeze(1)
 
 class Discriminator(torch.nn.Module):
     def __init__(self, inputSize, embed_dim):
