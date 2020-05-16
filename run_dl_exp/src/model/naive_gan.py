@@ -28,7 +28,8 @@ class Generator_Z(torch.nn.Module):
         super().__init__()
         self.inputSize = inputSize
         self.embed1 = torch.nn.Embedding(inputSize, embed_dim, padding_idx=0)  
-        self.fc1 = torch.nn.Linear(embed_dim*2, 1)
+        self.fc1 = torch.nn.Linear(embed_dim*2, embed_dim)
+        self.fc2 = torch.nn.Linear(embed_dim, 1)
         torch.nn.init.xavier_uniform_(self.embed1.weight.data[1:, :])
         #torch.nn.init.uniform_(self.embed1.weight.data[1:, :], 0, 1./np.sqrt(self.inputSize*1.))
 
@@ -42,6 +43,8 @@ class Generator_Z(torch.nn.Module):
 
         ## merge
         x12 = self.fc1(torch.cat((ctx*itm, z), 1))  # (batch_size,)
+        x12 = F.relu(x12)
+        x12 = self.fc2(x12)  # (batch_size,)
         #print('G size', x12.size())
         return x12
 
