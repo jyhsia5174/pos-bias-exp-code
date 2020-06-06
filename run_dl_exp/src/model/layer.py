@@ -9,16 +9,16 @@ class FeaturesLinear(torch.nn.Module):
         super().__init__()
         self.fc = torch.nn.Embedding(sum(field_dims), output_dim, padding_idx=0)
         self.bias = torch.nn.Parameter(torch.zeros((output_dim,)))
-        self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
+        self.offsets = torch.Tensor(np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long))
         torch.nn.init.xavier_uniform_(self.fc.weight.data[1:, :])
 
     #def forward(self, x):
-    def forward(self, x, x_val=None):  #[batch_size, 3, num_feats] [[[0,1,2,3,4,5,6],[0,1,2,3]]] (1, num_fields, num_dims) 
+    def forward(self, x_field, x, x_val=None):  #[batch_size, 3, num_feats] [[[0,1,2,3,4,5,6],[0,1,2,3]]] (1, num_fields, num_dims) 
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         #x = x + x.new_tensor(self.offsets).unsqueeze(0)
-        x = x + x.new_tensor(self.offsets[x_field.flatten()]).reshape(x.shape)
+        x = x + torch.as_tensor(self.offsets[x_field.flatten()], dtype=torch.long, device=x.device).reshape(x.shape)
         if x_val is None:
             return torch.sum(self.fc(x), dim=1) + self.bias
         else:
@@ -33,14 +33,14 @@ class FeaturesEmbedding(torch.nn.Module):
         #for embedding in self.embeddings:
         #    torch.nn.init.xavier_uniform_(embedding.weight.data[1:, :])
         self.embedding = torch.nn.Embedding(sum(field_dims), embed_dim, padding_idx=0)
-        self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
+        self.offsets = torch.Tensor(np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long))
         torch.nn.init.xavier_uniform_(self.embedding.weight.data[1:, :])
 
     def forward(self, x_field, x, x_val=None):  #[batch_size, 3, num_feats] [[[0,1,2,3,4,5,6],[0,1,2,3]]] (1, num_fields, num_dims) 
         """
         :param x: Long tensor of size ``(batch_size, num_feats)``
         """
-        x = x + x.new_tensor(self.offsets[x_field.flatten()]).reshape(x.shape)
+        x = x + torch.as_tensor(self.offsets[x_field.flatten()], dtype=torch.long, device=x.device).reshape(x.shape)
         if x_val is None:
             xs = [self.embedding((x)*(x_field==f).to(torch.long)).sum(dim=1) 
                     for f in range(1, self.num_fields)]
@@ -84,7 +84,6 @@ class FieldAwareFactorizationMachine(torch.nn.Module):
         ix = list()
         for i in range(self.num_fields - 2):
             for j in range(i + 1, self.num_fields - 1):
-                print(xs[i].shape)
                 ix.append(xs[j][:, i] * xs[i][:, j])
         ix = torch.stack(ix, dim=1)
         return ix
@@ -115,7 +114,7 @@ class MultiLayerPerceptron(torch.nn.Module):
         layers = list()
         for embed_dim in embed_dims:
             layers.append(torch.nn.Linear(input_dim, embed_dim))
-            layers.append(torch.nn.BatchNorm1d(embed_dim))
+            #layers.append(torch.nn.BatchNorm1d(embed_dim))
             layers.append(torch.nn.ReLU())
             layers.append(torch.nn.Dropout(p=dropout))
             input_dim = embed_dim

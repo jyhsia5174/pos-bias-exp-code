@@ -1,6 +1,6 @@
 import torch
 
-from layer import FactorizationMachine, FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
+from src.model.layer import FactorizationMachine, FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
 
 
 class DeepFactorizationMachineModel(torch.nn.Module):
@@ -19,10 +19,11 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         self.embed_output_dim = (len(field_dims) - 1) * embed_dim
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout)
 
-    def forward_once(self, x_field, x, x_val=None):
+    def forward(self, x_field, x, x_val=None):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         embed_x = self.embedding(x_field, x, x_val)
-        x = self.linear(x, x_val) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
-        return torch.sigmoid(x.squeeze(1))
+        #print(embed_x.shape, embed_x.view(-1, self.embed_output_dim).shape)
+        x = self.linear(x_field, x, x_val) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
+        return x.squeeze(1)

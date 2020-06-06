@@ -1,6 +1,6 @@
 import torch
 
-from layer import FeaturesLinear, FieldAwareFactorizationMachine
+from src.model.layer import FeaturesLinear, FieldAwareFactorizationMachine
 
 
 class FieldAwareFactorizationMachineModel(torch.nn.Module):
@@ -21,5 +21,6 @@ class FieldAwareFactorizationMachineModel(torch.nn.Module):
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         ffm_term = torch.sum(torch.sum(self.ffm(x_field, x, x_val), dim=1), dim=1, keepdim=True)
-        x = self.linear(x, x_val) + ffm_term
-        return torch.sigmoid(x.squeeze(1))
+        #x = self.linear(x_field, x, x_val) + ffm_term
+        x = ffm_term
+        return x.squeeze(1)
