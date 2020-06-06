@@ -21,14 +21,6 @@ def mkdir_if_not_exist(path):
 def merge_dims(t):
     return t.view(tuple(-1 if i==0 else _s for i, _s in enumerate(t.size()[1:])))
 
-def hook(self, input, output):
-    tmp = torch.sigmoid(output.data).flatten().tolist()
-    ratio = [tmp[0]]
-    for i in range(1, 10):
-        ratio.append(tmp[i+1]/tmp[i])
-    print(tmp)
-    print(ratio, np.mean(ratio[1:]))
-
 class SimDataset(Dataset):
     def __init__(self, dataset1, dataset2):
         assert len(dataset1) == len(dataset2), "Can't combine 2 datasets for their different length!"
@@ -91,11 +83,7 @@ def get_model(name, field_dims, embed_dim):
 
 def model_helper(data_pack, model, model_name, device):
     context, item, target, pos, _ = data_pack
-    try:
-        data = torch.cat((context, item), dim=-1)
-    except:
-        print(context.shape, item.shape)
-        raise
+    data = torch.cat((context, item), dim=-1)
     #data, target = merge_dims(data.to(device, non_blocking=True)), merge_dims(target.to(device, non_blocking=True))
     data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
     y = model(data[:, 0, :].to(torch.long), data[:, 1, :].to(torch.long), data[:, 2, :])
@@ -114,7 +102,6 @@ def train(model, optimizer, data_loader, criterion, device, model_name, log_inte
         optimizer.step()
         total_loss += loss.item()
         if (i + 1) % log_interval == 0:
-            #print('    - loss:', total_loss / log_interval)
             closs = total_loss/log_interval
             pbar.set_postfix(loss=closs)
             total_loss = 0
