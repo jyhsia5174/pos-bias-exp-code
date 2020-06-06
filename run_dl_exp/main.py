@@ -8,22 +8,23 @@ from sklearn.metrics import roc_auc_score, log_loss
 from torch.utils.data import DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
-from src.dataset.position import PositionDataset
 from src.dataset.a9a import A9ADataset
-from src.model.lr import LogisticRegression
-from src.model.bilr import BiLogisticRegression
-from src.model.extlr import ExtLogisticRegression
-from src.model.dssm import DSSM
-from src.model.bidssm import BiDSSM
-from src.model.extdssm import ExtDSSM
-from src.model.ffm import FFM
-from src.model.biffm import BiFFM
-from src.model.extffm import ExtFFM
-from src.model.xdfm import ExtremeDeepFactorizationMachineModel
-from src.model.bixdfm import BiExtremeDeepFactorizationMachineModel
-from src.model.extxdfm import ExtExtremeDeepFactorizationMachineModel
-from src.model.dfm import DeepFactorizationMachineModel
-from src.model.dcn import DeepCrossNetworkModel
+from src.dataset.ffm import FFMDataset
+from src.dataset.position import PositionDataset
+#from src.model.lr import LogisticRegression
+#from src.model.bilr import BiLogisticRegression
+#from src.model.extlr import ExtLogisticRegression
+#from src.model.dssm import DSSM
+#from src.model.bidssm import BiDSSM
+#from src.model.extdssm import ExtDSSM
+from src.model.ffm import FieldAwareFactorizationMachineModel as FFM
+#from src.model.biffm import BiFFM
+#from src.model.extffm import ExtFFM
+#from src.model.xdfm import ExtremeDeepFactorizationMachineModel
+#from src.model.bixdfm import BiExtremeDeepFactorizationMachineModel
+#from src.model.extxdfm import ExtExtremeDeepFactorizationMachineModel
+from src.model.dfm import DeepFactorizationMachineModel as DFM
+#from src.model.dcn import DeepCrossNetworkModel
 from utility import recommend
 
 
@@ -70,10 +71,11 @@ def hook(self, input, output):
 
 def get_dataset(name, path, data_prefix, rebuild_cache, max_dim=-1, test_flag=False):
     if name == 'pos':
-        #return PositionDataset(path, data_prefix, True, max_dim, test_flag)
         return PositionDataset(path, data_prefix, rebuild_cache, max_dim, test_flag)
-    if name == 'a9a':
+    elif name == 'a9a':
         return A9ADataset(path, training)
+    elif name == 'ffmdl':
+        return FFMDataset(path, training)
     else:
         raise ValueError('unknown dataset name: ' + name)
 
@@ -96,18 +98,18 @@ def get_model(name, dataset, embed_dim):
     #    return ExtDSSM(input_dims, embed_dim, dataset.pos_num)
     if name == 'ffm':
         return FFM(input_dims, embed_dim)
-    elif name == 'biffm':
-        return BiFFM(input_dims, dataset.pos_num, embed_dim)
-    elif name == 'extffm':
-        return ExtFFM(input_dims, dataset.pos_num, embed_dim)
+    #elif name == 'biffm':
+    #    return BiFFM(input_dims, dataset.pos_num, embed_dim)
+    #elif name == 'extffm':
+    #    return ExtFFM(input_dims, dataset.pos_num, embed_dim)
     #elif name == 'xdfm':
     #    return ExtremeDeepFactorizationMachineModel(input_dims, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     #elif name == 'bixdfm':
     #    return BiExtremeDeepFactorizationMachineModel(input_dims, dataset.pos_num, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
     #elif name == 'extxdfm':
     #    return ExtExtremeDeepFactorizationMachineModel(input_dims, dataset.pos_num, embed_dim=embed_dim*2, mlp_dims=(embed_dim, embed_dim), dropout=0.2, cross_layer_sizes=(embed_dim, embed_dim), split_half=True)
-    #elif name == 'dfm':
-    #    return DeepFactorizationMachineModel(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
+    elif name == 'dfm':
+        return DFM(input_dims, embed_dim=embed_dim, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     #elif name == 'dcn':
     #    return DeepCrossNetworkModel(input_dims, embed_dim=embed_dim, num_layers=3, mlp_dims=(embed_dim, embed_dim), dropout=0.2)
     else:
@@ -202,10 +204,6 @@ def pred(model, data_loader, device, model_name, item_num):
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device, mode='wops')
             num_of_user = y.size()[0]//item_num
-            #with open('dssm-unif.prob', 'a') as f:
-            #    y = y.tolist()
-            #    for j in range(num_of_user):
-            #        f.write('%s\n'%(' '.join([str(v) for v in y[j*1055:(j+1)*1055]])))
             for j in range(len(rngs)):
                 fp = fs[j]
                 out = y*(bids[j, :].repeat(num_of_user))
