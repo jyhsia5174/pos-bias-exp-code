@@ -69,7 +69,7 @@ class FieldAwareFactorizationMachine(torch.nn.Module):
         super().__init__()
         self.num_fields = len(field_dims)
         self.embeddings = torch.nn.ModuleList([
-            FeaturesEmbedding(field_dims, embed_dim) for _ in range(self.num_fields - 1)
+            FeaturesEmbedding(field_dims, embed_dim) for _ in range(self.num_fields)
         ])
         #self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long) 
 
@@ -80,11 +80,14 @@ class FieldAwareFactorizationMachine(torch.nn.Module):
         #x = x + x.new_tensor(self.offsets).unsqueeze(0)
         #xs = [self.embeddings[i](x) for i in range(self.num_fields)]
         #x = x + x.new_tensor(self.offsets[x_field.flatten()]).reshape(x.shape)
-        xs = [self.embeddings[f](x_field, x, x_val) for f in range(self.num_fields - 1)]  # field_num, bs, field_num, embed_dim
+        xs = [self.embeddings[f](x_field, x, x_val) for f in range(self.num_fields)]  # field_num, bs, field_num, embed_dim
         ix = list()
         for i in range(self.num_fields - 2):
-            for j in range(i + 1, self.num_fields - 1):
-                ix.append(xs[j][:, i] * xs[i][:, j])
+            for j in range(i, self.num_fields - 1):
+                if i == j:
+                    ix.append(xs[-1][:, i] * xs[i][:, j])
+                else:
+                    ix.append(xs[j][:, i] * xs[i][:, j])
         ix = torch.stack(ix, dim=1)
         return ix
 

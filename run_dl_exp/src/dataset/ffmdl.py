@@ -191,10 +191,13 @@ class FFMDataset(Dataset):
         elif self.read_flag == 1:
             ctx_idx, item_idx = divmod(idx, self.item_num)
             with self.env.begin(write=False) as txn:
-                #item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
+                item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
                 ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(3, -1)
                 item = self.items[item_idx, :, :]
-            flag = -1
+                if int(item_idx) in item_array[0, :].astype(np.long):
+                    flag = 1
+                else:
+                    flag = 0
             pos = 0 
         elif self.read_flag == 2:
             ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')

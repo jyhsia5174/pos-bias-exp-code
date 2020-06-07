@@ -4,7 +4,7 @@ import time
 import tqdm
 import numpy as np
 import sys
-from sklearn.metrics import roc_auc_score, log_loss
+from sklearn.metrics import roc_auc_score, log_loss, ndcg_score
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
@@ -13,6 +13,14 @@ from src.model.ffm import FieldAwareFactorizationMachineModel as FFM
 from src.model.dfm import DeepFactorizationMachineModel as DFM
 #from utility import recommend
 
+
+def precision_at_k(y_true, y_score, k):
+    p = []
+    for i in range(y_true.shape[0]):
+        top_k_id = np.argsort(y_score[i, :])[::-1][:k]
+        p.append(y_true[i, top_k_id].sum()/y_true.shape[1])
+    
+    return sum(p)/len(p)
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -36,32 +44,6 @@ class SimDataset(Dataset):
     def __len__(self):
         return len(self.dataset1)
 
-#def collate_fn_for_lr(batch):
-#    data = [torch.LongTensor(np.hstack((i['item'], i['context']))) for i in batch]
-#    label = [i['label'] for i in batch]
-#    pos = [i['pos'] for i in batch]
-#    #if 0 in pos:
-#    #    print("The position padding_idx occurs!")
-#    #data.sort(key=lambda x: len(x), reverse=True)
-#    #data_length = [len(sq) for sq in data]
-#    data = rnn_utils.pad_sequence(data, batch_first=True, padding_value=0)
-#    return data, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1)
-#
-#def collate_fn_for_dssm(batch):
-#    context = [torch.LongTensor(i['context']) for i in batch]
-#    value = [torch.FloatTensor(i['value']) for i in batch]
-#    item = [torch.LongTensor(i['item']) for i in batch]
-#    label = [i['label'] for i in batch]
-#    pos = [i['pos'] for i in batch]
-#    #if 0 in pos:
-#    #    print("The position padding_idx occurs!")
-#    #data.sort(key=lambda x: len(x), reverse=True)
-#    #data_length = [len(sq) for sq in data]
-#    item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
-#    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-#    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
-#    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
-
 def get_dataset(name, path, data_prefix, rebuild_cache, tr_field_dims=None, read_flag=0):
     if name == 'ffmdl':
         return FFMDataset(path, data_prefix, rebuild_cache, tr_field_dims, read_flag)
@@ -72,7 +54,6 @@ def get_model(name, field_dims, embed_dim):
     """
     Hyperparameters are empirically determined, not opitmized.
     """
-    #input_dims = dataset.max_dim
     if name == 'ffm':
         return FFM(field_dims, embed_dim)
     elif name == 'dfm':
@@ -84,7 +65,6 @@ def get_model(name, field_dims, embed_dim):
 def model_helper(data_pack, model, model_name, device):
     context, item, target, pos, _ = data_pack
     data = torch.cat((context, item), dim=-1)
-    #data, target = merge_dims(data.to(device, non_blocking=True)), merge_dims(target.to(device, non_blocking=True))
     data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
     y = model(data[:, 0, :].to(torch.long), data[:, 1, :].to(torch.long), data[:, 2, :])
 
@@ -128,47 +108,67 @@ def bpr_train(model, optimizer, data_loader, device, model_name):
 
 def test(model, data_loader, device, model_name):
     model.eval()
-    #handle = model.fc2.register_forward_hook(hook)
-    #model(torch.LongTensor([[1]]).to(device), torch.LongTensor([[0,1,2,3,4,5,6,7,8,9,10]]).to(device))
-    #handle.remove()
     targets, predicts = list(), list()
     with torch.no_grad():
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
             y, target = model_helper(tmp, model, model_name, device)
-            y = torch.sigmoid(y)
+            y = torch.sigmoid(y)  # 1,2,3//4,5
             #num_of_user = y.size()[0]//10
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
-    return roc_auc_score(targets, predicts), log_loss(targets, predicts)
+    #return roc_auc_score(targets, predicts), log_loss(targets, predicts)
+    return 0, log_loss(targets, predicts)
 
-
-def pred(model, data_loader, device, model_name, item_num):
-    num_of_pos = 10
-    res = np.empty(data_loader.batch_size//item_num*num_of_pos, dtype=np.int32)
-    rngs = [np.random.RandomState(seed) for seed in [0,3,4,5,6]]
-    bids = np.empty((len(rngs), item_num)) 
-    for i, rng in enumerate(rngs):
-        bids[i, :] = rng.gamma(10, 0.4, item_num)
-    bids = torch.tensor(bids).to(device)
-
+def test_ranking(model, data_loader, device, model_name, item_num, eva_k):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
-        fs = list()
-        for j in range(len(rngs)):
-            fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
         for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device, mode='wops')
-            num_of_user = y.size()[0]//item_num
-            for j in range(len(rngs)):
-                fp = fs[j]
-                out = y*(bids[j, :].repeat(num_of_user))
-                #recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, item_num, num_of_pos, res[:num_of_user*num_of_pos])
-                _res = res[:num_of_user*num_of_pos].reshape(num_of_user, num_of_pos)
-                for r in range(num_of_user):
-                    tmp = ['%d:%.4f:%0.4f'%(ad, y[r*item_num+ad], bids[j, ad]) for ad in _res[r, :]]
-                    #tmp = ['%d:%.4f'%(ad, bids[j, ad]) for ad in _res[r, :]]
-                    fp.write('%s\n'%(' '.join(tmp)))
+            y, target = model_helper(tmp, model, model_name, device)
+            targets.extend(torch.flatten(target.to(torch.int)).tolist())
+            predicts.extend(torch.flatten(y).tolist())
+    targets = np.array(targets).reshape(-1, item_num)
+    predicts = np.array(predicts).reshape(-1, item_num)
+
+    return precision_at_k(targets, predicts, eva_k), ndcg_score(targets, predicts, eva_k)
+
+def pred(model, data_loader, device, model_name):
+    model.eval()
+    targets, predicts = list(), list()
+    with torch.no_grad():
+        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
+            y, _ = model_helper(tmp, model, model_name, device)
+            y = torch.sigmoid(y)
+            predicts.extend(torch.flatten(y).tolist())
+    return predicts
+
+#def pred(model, data_loader, device, model_name, item_num):
+#    num_of_pos = 10
+#    res = np.empty(data_loader.batch_size//item_num*num_of_pos, dtype=np.int32)
+#    rngs = [np.random.RandomState(seed) for seed in [0,3,4,5,6]]
+#    bids = np.empty((len(rngs), item_num)) 
+#    for i, rng in enumerate(rngs):
+#        bids[i, :] = rng.gamma(10, 0.4, item_num)
+#    bids = torch.tensor(bids).to(device)
+#
+#    model.eval()
+#    targets, predicts = list(), list()
+#    with torch.no_grad():
+#        fs = list()
+#        for j in range(len(rngs)):
+#            fs.append(open(os.path.join('tmp.pred.%d'%j), 'w'))
+#        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
+#            y, target = model_helper(tmp, model, model_name, device, mode='wops')
+#            num_of_user = y.size()[0]//item_num
+#            for j in range(len(rngs)):
+#                fp = fs[j]
+#                out = y*(bids[j, :].repeat(num_of_user))
+#                #recommend.get_top_k_by_greedy(out.cpu().numpy(), num_of_user, item_num, num_of_pos, res[:num_of_user*num_of_pos])
+#                _res = res[:num_of_user*num_of_pos].reshape(num_of_user, num_of_pos)
+#                for r in range(num_of_user):
+#                    tmp = ['%d:%.4f:%0.4f'%(ad, y[r*item_num+ad], bids[j, ad]) for ad in _res[r, :]]
+#                    #tmp = ['%d:%.4f'%(ad, bids[j, ad]) for ad in _res[r, :]]
+#                    fp.write('%s\n'%(' '.join(tmp)))
 
 
 def main(dataset_name,
@@ -183,6 +183,7 @@ def main(dataset_name,
          batch_size,
          embed_dim,
          weight_decay,
+         eva_k,
          device,
          save_dir,
          ps):
@@ -208,7 +209,7 @@ def main(dataset_name,
         pos_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, None, 0)
         neg_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, None, 2)
         train_dataset = SimDataset(pos_train_dataset, neg_train_dataset)
-        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, pos_train_dataset.field_dims, 0)
+        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, pos_train_dataset.field_dims, 1)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
         model = get_model(model_name, pos_train_dataset.field_dims, embed_dim).to(device)
@@ -218,19 +219,19 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = bpr_train(model, optimizer, train_data_loader, device, model_name)
-                va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
-                print('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f'%(epoch_i, tr_logloss, va_auc, va_logloss))
-                log.write('epoch:%d\ttr_logloss:%.6f\tva_auc:%.6f\tva_logloss:%.6f\n'%(epoch_i, tr_logloss, va_auc, va_logloss))
+                va_patk, va_ndcg = test_ranking(model, valid_data_loader, device, model_name, valid_dataset.item_num, eva_k)
+                print('epoch:%d\ttr_logloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                log.write('epoch:%d\ttr_logloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f\n'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
-    elif flag == 'pred':
-        train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
-        valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.get_max_dim() - 1, True)
-        item_num = valid_dataset.get_item_num()
-        refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
-        valid_data_loader = DataLoader(valid_dataset, batch_size=refine_batch_size, num_workers=8, pin_memory=True)
-        model = torch.load(model_path).to(device)
-        pred(model, valid_data_loader, device, model_name, item_num)
-    elif flag == 'test_auc':
+    #elif flag == 'pred':
+    #    #train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
+    #    valid_dataset = get_dataset(dataset_name, dataset_path, train_part, False)#, train_dataset.field_dims, 0)
+    #    #item_num = valid_dataset.get_item_num()
+    #    #refine_batch_size = int(batch_size//item_num*item_num)  # batch_size should be a multiple of item_num 
+    #    valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+    #    model = torch.load(model_path).to(device)
+    #    pred(model, valid_data_loader, device, model_name, item_num)
+    elif flag == 'test':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.field_dims, 0)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
@@ -249,18 +250,19 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', default='pos')
+    parser.add_argument('--dataset_name', default='ffmdl')
     parser.add_argument('--train_part', default='tr')
     parser.add_argument('--valid_part', default='va')
     parser.add_argument('--dataset_path', help='the path that contains item.svm, va.svm, tr.svm trva.svm')
     parser.add_argument('--flag', default='train')
-    parser.add_argument('--model_name', default='dfm')
+    parser.add_argument('--model_name', default='ffm')
     parser.add_argument('--model_path', default='', help='the path of model file')
     parser.add_argument('--epoch', type=float, default=30.)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--batch_size', type=float, default=500.)
     parser.add_argument('--embed_dim', type=float, default=32.)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
+    parser.add_argument('--eva_k', type=int, default=5)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
     parser.add_argument('--ps', default='wps')
@@ -277,6 +279,7 @@ if __name__ == '__main__':
          int(args.batch_size),
          int(args.embed_dim),
          args.weight_decay,
+         args.eva_k,
          args.device,
          args.save_dir,
          args.ps)
