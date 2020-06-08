@@ -123,8 +123,11 @@ def test_ranking(model, data_loader, device, model_name, item_num, eva_k):
     model.eval()
     targets, predicts = list(), list()
     with torch.no_grad():
-        for i, tmp in enumerate(tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)):
-            y, target = model_helper(tmp, model, model_name, device)
+        #for i, tmp in enumerate(tqdm.tqdm(va_data_loader, smoothing=0, mininterval=1.0, ncols=100)):
+        pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
+        #for i, (pos_data_pack, neg_data_pack) in enumerate(pbar):
+        for i, data_pack in enumerate(pbar):
+            y, target = model_helper(data_pack, model, model_name, device)
             targets.extend(torch.flatten(target.to(torch.int)).tolist())
             predicts.extend(torch.flatten(y).tolist())
     targets = np.array(targets).reshape(-1, item_num)
@@ -210,8 +213,10 @@ def main(dataset_name,
         neg_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, None, 2)
         train_dataset = SimDataset(pos_train_dataset, neg_train_dataset)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, pos_train_dataset.field_dims, 1)
+        #neg_valid_dataset = get_dataset(dataset_name, dataset_path, train_part, False, pos_train_dataset.field_dims, 1)
+        #valid_dataset = SimDataset(pos_valid_dataset, neg_valid_dataset)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=8000, num_workers=10, pin_memory=True)
         model = get_model(model_name, pos_train_dataset.field_dims, embed_dim).to(device)
         #criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -219,9 +224,10 @@ def main(dataset_name,
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
                 tr_logloss = bpr_train(model, optimizer, train_data_loader, device, model_name)
-                va_patk, va_ndcg = test_ranking(model, valid_data_loader, device, model_name, valid_dataset.item_num, eva_k)
-                print('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
-                log.write('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f\n'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                if (epoch_i+1)%3 == 0:
+                    va_patk, va_ndcg = test_ranking(model, valid_data_loader, device, model_name, valid_dataset.item_num, eva_k)
+                    print('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                    log.write('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f\n'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
     #elif flag == 'pred':
     #    #train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
@@ -262,7 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=float, default=500.)
     parser.add_argument('--embed_dim', type=float, default=32.)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
-    parser.add_argument('--eva_k', type=int, default=5)
+    parser.add_argument('--eva_k', type=int, default=50)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
     parser.add_argument('--ps', default='wps')

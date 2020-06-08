@@ -8,19 +8,20 @@ model_name=$3
 ps=$4
 
 # Data set
-ds='pos'
+ds='ffmdl'
 tr_part='trva'
-va_part='rnd_gt.pos'
+va_part='trva'
 ds_path='./'
 
 # Fixed parameter
-flag='train'
+flag='bpr_train'
 lr=`python select_params.py logs ${mode} | cut -d' ' -f1`
 wd=`python select_params.py logs ${mode} | cut -d' ' -f2`
 bs=`python select_params.py logs ${mode} | cut -d' ' -f3` 
 k=`python select_params.py logs ${mode} | cut -d' ' -f4`
 epoch=`python select_params.py logs ${mode} | cut -d' ' -f5`
 epoch=$((${epoch}+1))
+eva_k=50
 
 # others 
 log_path="test-score.${mode}"
@@ -41,6 +42,7 @@ cmd="${cmd} --save_dir ${log_path}"
 cmd="${cmd} --batch_size ${bs}"
 cmd="${cmd} --ps ${ps}"
 cmd="${cmd} --learning_rate ${lr}"
+cmd="${cmd} --eva_k ${eva_k}"
 cmd="${cmd} --weight_decay ${wd}"
 cmd="${cmd} --embed_dim ${k}"
 echo "${cmd}"

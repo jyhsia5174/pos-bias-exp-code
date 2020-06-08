@@ -8,15 +8,16 @@ model_name=$3
 ps=$4
 
 # Data set
-ds='pos'
+ds='ffmdl'
 tr_part='tr'
-va_part='va'
+va_part='trva'
 ds_path='./'
 
 # Fixed parameter
-flag='train'
-epoch=20
-bs=500
+flag='bpr_train'
+epoch=50
+bs=256
+eva_k=50
 
 # others
 log_path="logs"
@@ -34,15 +35,16 @@ train_cmd="${train_cmd} --model_name ${model_name}"
 train_cmd="${train_cmd} --epoch ${epoch}"
 train_cmd="${train_cmd} --device ${device}"
 train_cmd="${train_cmd} --save_dir ${log_path}"
+train_cmd="${train_cmd} --eva_k ${eva_k}"
 train_cmd="${train_cmd} --batch_size ${bs}"
-train_cmd="${train_cmd} --ps ${ps}"
+#train_cmd="${train_cmd} --ps ${ps}"
 
 # Print out all parameter pair
 for lr in 0.001 #0.001 0.0001
 do
-    for wd in 1e-5 1e-6 1e-7
+    for wd in 1e-6 1e-7 1e-8
     do
-        for k in 32 
+        for k in 16 32 64
         do
             cmd="${train_cmd} --learning_rate ${lr}"
             cmd="${cmd} --weight_decay ${wd}"
