@@ -220,8 +220,8 @@ def main(dataset_name,
             for epoch_i in range(epoch):
                 tr_logloss = bpr_train(model, optimizer, train_data_loader, device, model_name)
                 va_patk, va_ndcg = test_ranking(model, valid_data_loader, device, model_name, valid_dataset.item_num, eva_k)
-                print('epoch:%d\ttr_logloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
-                log.write('epoch:%d\ttr_logloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f\n'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                print('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                log.write('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f\n'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
     #elif flag == 'pred':
     #    #train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
