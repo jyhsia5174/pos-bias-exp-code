@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
 #from src.dataset.ffmdl import FFMDataset
-from src.dataset.ffmdl_batch import FFMDataset
+from src.dataset.ffmdl_batch_in_mem import FFMDataset
 from src.model.ffm import FieldAwareFactorizationMachineModel as FFM
 from src.model.dfm import DeepFactorizationMachineModel as DFM
 #from utility import recommend
