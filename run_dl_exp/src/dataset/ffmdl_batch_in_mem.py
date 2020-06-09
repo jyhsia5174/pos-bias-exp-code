@@ -54,6 +54,8 @@ class FFMDataset(Dataset):
             self.items = np.frombuffer(txn.get(b'items'), dtype=np.float32).reshape((self.item_num, 3, -1))
             #self.length = self.pos_num.sum() if self.read_flag != 1 else self.item_num*self.pos_num.shape[0]
             self.length = self.pos_num.shape[0]
+            self.item_arrays = dict([('citem_%d'%idx, np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1).copy()) for idx in range(self.length)])
+            self.ctx_arrays = dict([('ctx_%d'%idx, np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1).copy()) for idx in range(self.length)])
             self.item_set = np.arange(self.item_num, dtype=np.int32)
             print('Totally %d items, %d dims, %d max positions, %d samples'%(self.item_num, self.field_dims.sum(), self.pos_num.max(), self.length))
     
@@ -186,8 +188,8 @@ class FFMDataset(Dataset):
             #pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
             #assert ctx_idx >= 0, "idx-%d invalid"%idx
             with self.env.begin(write=False) as txn:
-                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1)
+                item_array = self.item_arrays['citem_%d'%idx]
+                ctx_array = self.ctx_arrays['ctx_%d'%idx]
                 item_idxes = item_array[0, :].astype(np.long)
                 items = self.items[item_idxes, :, :]
                 flags = item_array[1, :]
@@ -195,8 +197,8 @@ class FFMDataset(Dataset):
         elif self.read_flag == 1:
             #ctx_idx, item_idx = divmod(idx, self.item_num)
             with self.env.begin(write=False) as txn:
-                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1).copy()
+                item_array = self.item_arrays['citem_%d'%idx]
+                ctx_array = self.ctx_arrays['ctx_%d'%idx]
                 item_idxes = item_array[0, :].astype(np.long)
                 items = self.items
                 flags = np.zeros(self.item_num)
@@ -207,8 +209,8 @@ class FFMDataset(Dataset):
             #pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
             #assert ctx_idx >= 0, "idx-%d invalid"%idx
             with self.env.begin(write=False) as txn:
-                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1)
+                item_array = self.item_arrays['citem_%d'%idx]
+                ctx_array = self.ctx_arrays['ctx_%d'%idx]
                 neg_item_idxes = np.setxor1d(item_array[0, :].astype(np.long), self.item_set, True)
                 item_idxes = np.random.choice(neg_item_idxes, item_array.shape[1], replace=False)
                 items = self.items[item_idxes, :, :]
