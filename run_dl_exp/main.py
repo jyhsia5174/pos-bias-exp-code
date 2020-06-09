@@ -8,19 +8,38 @@ from sklearn.metrics import roc_auc_score, log_loss, ndcg_score
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.utils.rnn as rnn_utils
 
-from src.dataset.ffmdl import FFMDataset
+#from src.dataset.ffmdl import FFMDataset
+from src.dataset.ffmdl_batch import FFMDataset
 from src.model.ffm import FieldAwareFactorizationMachineModel as FFM
 from src.model.dfm import DeepFactorizationMachineModel as DFM
 #from utility import recommend
 
 
-def precision_at_k(y_true, y_score, k):
-    p = []
+def collate_fn(batch):
+    if len(batch[0]) == 5:
+        res = []
+        for i in range(len(batch[0])):
+            res.append(torch.cat([torch.as_tensor(b[i]) for b in batch], dim=0))
+        return tuple(res)
+    elif len(batch[0]) == 2:
+        res1 = []
+        for i in range(len(batch[0][0])):
+            res1.append(torch.cat([torch.as_tensor(b[0][i]) for b in batch], dim=0))
+        res2 = []
+        for i in range(len(batch[0][1])):
+            res2.append(torch.cat([torch.as_tensor(b[1][i]) for b in batch], dim=0))
+        return tuple(res1), tuple(res2)
+    else:
+        raise
+    return
+
+def precision_at_k(y_true, y_score, ks):
+    p = np.zeros(len(ks))
     for i in range(y_true.shape[0]):
-        top_k_id = np.argsort(y_score[i, :])[::-1][:k]
-        p.append(y_true[i, top_k_id].sum()/y_true.shape[1])
-    
-    return sum(p)/len(p)
+        sorted_id = np.argsort(y_score[i, :])[::-1]
+        for j, k in enumerate(ks): 
+            p[j] += (y_true[i, sorted_id[:k]].sum()/k)
+    return p
 
 def mkdir_if_not_exist(path):
     if not os.path.exists(path):
@@ -121,19 +140,23 @@ def test(model, data_loader, device, model_name):
 
 def test_ranking(model, data_loader, device, model_name, item_num, eva_k):
     model.eval()
-    targets, predicts = list(), list()
+    #targets, predicts = list(), list()
+    ks = [5, 10, 20, 40]
+    p = np.zeros(len(ks))
+    count = 0
+    #ndcg = np.zeros(len(ks))
     with torch.no_grad():
         #for i, tmp in enumerate(tqdm.tqdm(va_data_loader, smoothing=0, mininterval=1.0, ncols=100)):
         pbar = tqdm.tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
         #for i, (pos_data_pack, neg_data_pack) in enumerate(pbar):
         for i, data_pack in enumerate(pbar):
             y, target = model_helper(data_pack, model, model_name, device)
-            targets.extend(torch.flatten(target.to(torch.int)).tolist())
-            predicts.extend(torch.flatten(y).tolist())
-    targets = np.array(targets).reshape(-1, item_num)
-    predicts = np.array(predicts).reshape(-1, item_num)
-
-    return precision_at_k(targets, predicts, eva_k), ndcg_score(targets, predicts, eva_k)
+            targets = np.array(torch.flatten(target.to(torch.int)).tolist()).reshape(-1, item_num)
+            predicts = np.array(torch.flatten(y).tolist()).reshape(-1, item_num)
+            count+=targets.shape[0]
+            p += precision_at_k(targets, predicts, ks)
+    return p/count
+            #ndcg += ndcg_score(targets, predicts, eva_k)
 
 def pred(model, data_loader, device, model_name):
     model.eval()
@@ -195,8 +218,10 @@ def main(dataset_name,
     if flag == 'train':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.field_dims, 0)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
+        #train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
+        #valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True, collate_fn=collate_fn)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, collate_fn=collate_fn)
         model = get_model(model_name, train_dataset.field_dims, embed_dim).to(device)
         criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -213,21 +238,28 @@ def main(dataset_name,
         neg_train_dataset = get_dataset(dataset_name, dataset_path, train_part, False, None, 2)
         train_dataset = SimDataset(pos_train_dataset, neg_train_dataset)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, pos_train_dataset.field_dims, 1)
+        #valid_dataset = torch.utils.data.RandomSampler(valid_dataset, num_samples=len(valid_dataset)//1000)
         #neg_valid_dataset = get_dataset(dataset_name, dataset_path, train_part, False, pos_train_dataset.field_dims, 1)
         #valid_dataset = SimDataset(pos_valid_dataset, neg_valid_dataset)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=8000, num_workers=10, pin_memory=True)
+        #train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=10, pin_memory=True, shuffle=True)
+        #valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=10, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=True, collate_fn=collate_fn)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=50, num_workers=8, pin_memory=True, collate_fn=collate_fn)
         model = get_model(model_name, pos_train_dataset.field_dims, embed_dim).to(device)
         #criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         model_file_name = '_'.join([model_name, 'lr-'+str(learning_rate), 'l2-'+str(weight_decay), 'bs-'+str(batch_size), 'k-'+str(embed_dim), train_part])
         with open(os.path.join(save_dir, model_file_name+'.log'), 'w') as log:
             for epoch_i in range(epoch):
+                #sample_idxes = np.random.randint(len(valid_dataset), size=1000*valid_dataset.item_num)
+                #valid_subset = torch.utils.data.Subset(valid_dataset, sample_idxes)
+                #valid_data_loader = DataLoader(valid_subset, batch_size=batch_size, num_workers=10, pin_memory=True)
                 tr_logloss = bpr_train(model, optimizer, train_data_loader, device, model_name)
                 if (epoch_i+1)%3 == 0:
-                    va_patk, va_ndcg = test_ranking(model, valid_data_loader, device, model_name, valid_dataset.item_num, eva_k)
-                    print('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
-                    log.write('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f\n'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                    va_patk = test_ranking(model, valid_data_loader, device, model_name, valid_dataset.item_num, eva_k)
+                    #print('epoch:%d\ttr_bprloss:%.6f\tva_p@%d:%.6f\tva_ndcg@%d:%.6f'%(epoch_i, tr_logloss, eva_k, va_patk, eva_k, va_ndcg))
+                    print('epoch:%d\ttr_bprloss:%.6f\tva_p@[5,10,20,40]:%s'%(epoch_i, tr_logloss,','.join(['%.6f'%p for p in va_patk])))
+                    log.write('epoch:%d\ttr_bprloss:%.6f\tva_p@[5,10,20,40]:%s\n'%(epoch_i, tr_logloss,','.join(['%.6f'%p for p in va_patk])))
         torch.save(model, f'{save_dir}/{model_file_name}.pt')
     #elif flag == 'pred':
     #    #train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
@@ -240,7 +272,8 @@ def main(dataset_name,
     elif flag == 'test':
         train_dataset = get_dataset(dataset_name, dataset_path, train_part, False)
         valid_dataset = get_dataset(dataset_name, dataset_path, valid_part, False, train_dataset.field_dims, 0)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        #valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8, pin_memory=True, collate_fn=collate_fn)
         #print(device)
         model = torch.load(model_path, map_location=device)
         va_auc, va_logloss = test(model, valid_data_loader, device, model_name)
@@ -268,7 +301,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=float, default=500.)
     parser.add_argument('--embed_dim', type=float, default=32.)
     parser.add_argument('--weight_decay', type=float, default=1e-6)
-    parser.add_argument('--eva_k', type=int, default=50)
+    parser.add_argument('--eva_k', type=int, default=5)
     parser.add_argument('--device', default='cuda:0', help='format like "cuda:0" or "cpu"')
     parser.add_argument('--save_dir', default='logs')
     parser.add_argument('--ps', default='wps')

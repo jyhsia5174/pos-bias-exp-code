@@ -10,7 +10,7 @@ ps=$4
 # Data set
 ds='ffmdl'
 tr_part='trva'
-va_part='trva'
+va_part='va'
 ds_path='./'
 
 # Fixed parameter
@@ -21,7 +21,7 @@ bs=`python select_params.py logs ${mode} | cut -d' ' -f3`
 k=`python select_params.py logs ${mode} | cut -d' ' -f4`
 epoch=`python select_params.py logs ${mode} | cut -d' ' -f5`
 epoch=$((${epoch}+1))
-eva_k=50
+eva_k=5
 
 # others 
 log_path="test-score.${mode}"

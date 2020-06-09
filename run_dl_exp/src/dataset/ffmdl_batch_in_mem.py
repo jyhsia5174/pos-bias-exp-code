@@ -52,8 +52,8 @@ class FFMDataset(Dataset):
             self.max_ctx_num = np.frombuffer(txn.get(b'max_ctx_num'), dtype=np.int32)[0]
             self.max_item_num = np.frombuffer(txn.get(b'max_item_num'), dtype=np.int32)[0]
             self.items = np.frombuffer(txn.get(b'items'), dtype=np.float32).reshape((self.item_num, 3, -1))
-            #self.length = (txn.stat()['entries'] - 6)//2
-            self.length = self.pos_num.sum() if self.read_flag != 1 else self.item_num*self.pos_num.shape[0]
+            #self.length = self.pos_num.sum() if self.read_flag != 1 else self.item_num*self.pos_num.shape[0]
+            self.length = self.pos_num.shape[0]
             self.item_set = np.arange(self.item_num, dtype=np.int32)
             print('Totally %d items, %d dims, %d max positions, %d samples'%(self.item_num, self.field_dims.sum(), self.pos_num.max(), self.length))
     
@@ -182,39 +182,38 @@ class FFMDataset(Dataset):
     #@profile
     def __getitem__(self, idx):  # idx = 10*context_idx + pos
         if self.read_flag == 0:
-            ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
-            pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
-            assert ctx_idx >= 0, "idx-%d invalid"%idx
-            with self.env.begin(write=False) as txn:
-                item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(3, -1)
-                item_idx = item_array[0, :].astype(np.long)[pos]
-                item = self.items[item_idx, :, :]
-                flag = item_array[1, :][pos]
-            pos += 1
-        elif self.read_flag == 1:
-            ctx_idx, item_idx = divmod(idx, self.item_num)
-            with self.env.begin(write=False) as txn:
-                item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(3, -1).copy()
-                item = self.items[item_idx, :, :]
-                if int(item_idx) in item_array[0, :].astype(np.long):
-                    flag = 1
-                else:
-                    flag = 0
-            pos = 0 
-        elif self.read_flag == 2:
-            ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
+            #ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
             #pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
-            assert ctx_idx >= 0, "idx-%d invalid"%idx
+            #assert ctx_idx >= 0, "idx-%d invalid"%idx
             with self.env.begin(write=False) as txn:
-                item_array = np.frombuffer(txn.get(b'citem_%d'%ctx_idx), dtype=np.float32).reshape(2, -1)
-                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%ctx_idx), dtype=np.float32).reshape(3, -1)
+                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1)
+                item_idxes = item_array[0, :].astype(np.long)
+                items = self.items[item_idxes, :, :]
+                flags = item_array[1, :]
+            pos = np.arange(1, item_array.shape[1]+1)
+        elif self.read_flag == 1:
+            #ctx_idx, item_idx = divmod(idx, self.item_num)
+            with self.env.begin(write=False) as txn:
+                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1).copy()
+                item_idxes = item_array[0, :].astype(np.long)
+                items = self.items
+                flags = np.zeros(self.item_num)
+                flags[item_idxes] = 1
+            pos = np.zeros(self.item_num) 
+        elif self.read_flag == 2:
+            #ctx_idx = np.searchsorted(self.pos_cum_sum, idx, side='right')
+            #pos = idx if ctx_idx == 0 else idx - self.pos_cum_sum[ctx_idx - 1]
+            #assert ctx_idx >= 0, "idx-%d invalid"%idx
+            with self.env.begin(write=False) as txn:
+                item_array = np.frombuffer(txn.get(b'citem_%d'%idx), dtype=np.float32).reshape(2, -1)
+                ctx_array = np.frombuffer(txn.get(b'ctx_%d'%idx), dtype=np.float32).reshape(3, -1)
                 neg_item_idxes = np.setxor1d(item_array[0, :].astype(np.long), self.item_set, True)
-                item_idx = np.random.choice(neg_item_idxes, replace=False)
-                item = self.items[item_idx, :, :]
-            flag = -1
-            pos = 0
+                item_idxes = np.random.choice(neg_item_idxes, item_array.shape[1], replace=False)
+                items = self.items[item_idxes, :, :]
+            flags = np.zeros(item_array.shape[1])
+            pos = np.zeros(item_array.shape[1])
         else:
             raise ValueError('Wrong flag for reading data'%self.read_flag)
         
@@ -224,11 +223,14 @@ class FFMDataset(Dataset):
                     ctx_array[:, i] = 0
 
         if self.read_flag == 0:
-            return ctx_array, item, flag, pos, item_idx#, np.tile(ctx_value, (self.pos_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
+            ctx_array = np.tile(ctx_array, (item_array.shape[1], 1, 1))
+            return ctx_array, items, flags, pos, item_idxes#, np.tile(ctx_value, (self.pos_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
         elif self.read_flag == 1:
-            return ctx_array, item, flag, pos, item_idx#, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
+            ctx_array = np.tile(ctx_array, (self.item_num, 1, 1))
+            return ctx_array, items, flags, pos, item_idxes#, np.tile(ctx_value, (self.item_num, 1))  # pos \in {1,2,...9,10}, 0 for no-position
         elif self.read_flag == 2:
-            return ctx_array, item, flag, pos, item_idx#, np.tile(ctx_value, (self.pos_num, 1))  
+            ctx_array = np.tile(ctx_array, (item_array.shape[1], 1, 1))
+            return ctx_array, items, flags, pos, item_idxes#, np.tile(ctx_value, (self.pos_num, 1))  
 
 
     def get_max_dim(self):
@@ -239,17 +241,24 @@ class FFMDataset(Dataset):
 
 if __name__ == '__main__':
     #@profile
-    #def collate_fn_for_dssm(batch):
-    #    print(batch)
-    #    context = [torch.LongTensor(i['context']) for i in batch]
-    #    value = [torch.FloatTensor(i['value']) for i in batch]
-    #    item = [torch.LongTensor(i['item']) for i in batch]
-    #    label = [i['label'] for i in batch]
-    #    pos = [i['pos'] for i in batch]
-    #    item = rnn_utils.pad_sequence(item, batch_first=True, padding_value=0)
-    #    context = rnn_utils.pad_sequence(context, batch_first=True, padding_value=0)
-    #    value = rnn_utils.pad_sequence(value, batch_first=True, padding_value=0)
-    #    return context, item, torch.FloatTensor(label), torch.FloatTensor(pos).unsqueeze(-1), value
+    def collate_fn(batch):
+        if len(batch[0]) == 5:
+            res = []
+            for i in range(len(batch[0])):
+                res.append(torch.cat([torch.as_tensor(b[i]) for b in batch], dim=0))
+            return tuple(res)
+        elif len(batch[0]) == 2:
+            res1 = []
+            for i in range(len(batch[0][0])):
+                res1.append(torch.cat([torch.as_tensor(b[0][i]) for b in batch], dim=0))
+            res2 = []
+            for i in range(len(batch[0][1])):
+                res2.append(torch.cat([torch.as_tensor(b[1][i]) for b in batch], dim=0))
+            return tuple(res1), tuple(res2)
+        else:
+            raise
+        return
+
     def set_seed(x=0):
         np.random.seed(x)
         random.seed(x)
@@ -284,7 +293,7 @@ if __name__ == '__main__':
         device='cuda:0'
         #data_loader = DataLoader(dataset, batch_size=50, num_workers=0, shuffle=False)
         sim_dataset = SimDataset(dataset, imp_dataset)
-        data_loader = DataLoader(sim_dataset, batch_size=1, num_workers=0, shuffle=False) #worker_init_fn=worker_init_fn, sampler=srs(sample_list))
+        data_loader = DataLoader(sim_dataset, batch_size=1, num_workers=0, collate_fn=collate_fn, shuffle=False) #worker_init_fn=worker_init_fn, sampler=srs(sample_list))
         print(dataset.field_dims)
         pbar = tqdm(data_loader, smoothing=0, mininterval=1.0, ncols=100)
         #for i, data_pack in enumerate(pbar):
@@ -299,7 +308,10 @@ if __name__ == '__main__':
             #        pos.view(tuple(-1 if i==0 else _s for i, _s in enumerate(pos.size()[1:]))).to(device, torch.long), \
             #        value.view(tuple(-1 if i==0 else _s for i, _s in enumerate(value.size()[1:]))).to(device, torch.float)
             #print(context[30:31], item[30:31], target[30:31], pos[30:31], item_idxes[30:31])#, value[:])
-            #print(context.size(), item.size(), target.size(), pos.size())#, value.size())
+            print(context.size(), item.size(), target.size(), pos.size())#, value.size())
+            print(imp_context.size(), imp_item.size(), imp_target.size(), imp_pos.size())#, value.size())
+            print(context, item, target, pos, item_idx)#, value.size())
+            print(imp_context, imp_item, imp_target, imp_pos, imp_item_idx)#, value.size())
             #break
             #print(item_idxes)
             #print(context.size(), imp_context.size())
@@ -308,7 +320,8 @@ if __name__ == '__main__':
             #else:
             #    print((context[0, :, :], imp_context[0, :, :]))
             #    break
-            if i >= 0: 
+            if i >= 0:
+                break
                 np.set_printoptions(suppress=True)
                 print(context[0,:,:], item[0,:,:], target, pos, item_idx)
                 print(imp_context[0,:,:], imp_item[0,:,:], imp_target, imp_pos, imp_item_idx)

@@ -10,14 +10,14 @@ ps=$4
 # Data set
 ds='ffmdl'
 tr_part='tr'
-va_part='trva'
+va_part='va'
 ds_path='./'
 
 # Fixed parameter
 flag='bpr_train'
-epoch=50
-bs=256
-eva_k=50
+epoch=30
+bs=8192
+eva_k=5
 
 # others
 log_path="logs"
