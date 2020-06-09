@@ -15,7 +15,7 @@ ds_path='./'
 
 # Fixed parameter
 flag='bpr_train'
-epoch=30
+epoch=50
 bs=8192
 eva_k=5
 
@@ -42,7 +42,7 @@ train_cmd="${train_cmd} --batch_size ${bs}"
 # Print out all parameter pair
 for lr in 0.001 #0.001 0.0001
 do
-    for wd in 1e-6 1e-7 1e-8
+    for wd in 1e-3 1e-5 1e-7
     do
         for k in 16 32 64
         do
