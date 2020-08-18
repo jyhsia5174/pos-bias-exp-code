@@ -89,7 +89,7 @@ for i, row in context.iterrows():
     user_id = row['msno']
     song_id = str(row['song_id'])
     if user_id in dset:
-        context.set_value(i, 'his', '|'.join(dset[user_id][-50:]))
+        context.at[i, 'his'] = '|'.join(dset[user_id][-50:])
         dset[user_id].append(song_id)
     else:
         dset[user_id] = [song_id]
