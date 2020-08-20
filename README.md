@@ -19,7 +19,7 @@ git submodule init; git submodule update;
 
 ### Create data (should be do first!)
 
-#### Proprocess data
+#### 1. Proprocess data
 
 ##### KKBOX
 
@@ -37,14 +37,16 @@ cd data/data_preprocessing/ob.300
 ./preprocess_ob.sh
 ```
 
-#### Create data with self validation set
+#### 2. Final data preperation
+
+#####  Create data with self validation set
 
 ```shell
 cd data;
 ./gen_data_selfva.sh {raw_data_path} {pos_bias}
 ```
 
-#### Create data with rand validation set
+#####  Create data with rand validation set
 
 ```shell
 cd data;
