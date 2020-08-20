@@ -19,14 +19,34 @@ git submodule init; git submodule update;
 
 ### Create data (should be do first!)
 
-#### Create data with self validation set
+#### 1. Proprocess data
+
+##### KKBOX
+
+Put KKBOX's members.csv, songs.csv and train.csv to "data/data_preprocessing/kkbox-100/kkbox_csv_to_ocffm/".
+```
+cd data/data_preprocessing/kkbox-100/
+./preprocess_kkbox.sh
+```
+
+##### Outbrain
+
+Put Outbrain's clicks_train.csv, cv_events.csv, promote_content.csv and document_meta.csv to "data/data_preprocessing/ob.300/ob_csv_to_ocffm".
+```
+cd data/data_preprocessing/ob.300
+./preprocess_ob.sh
+```
+
+#### 2. Final data preperation
+
+#####  Create data with self validation set
 
 ```shell
 cd data;
 ./gen_data_selfva.sh {raw_data_path} {pos_bias}
 ```
 
-#### Create data with rand validation set
+#####  Create data with rand validation set
 
 ```shell
 cd data;
