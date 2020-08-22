@@ -64,6 +64,10 @@ cd data;
   - item.svm  
   - random.svm.pos.0.5.bias  
   - truth.svm
+  - greedy.random.ffm.pos.0.5.bias 
+  - random.greedy.ffm.pos.0.5.bias 
+  - greedy.random.svm.pos.0.5.bias 
+  - random.greedy.svm.pos.0.5.bias 
 - **{pos_bias}** is like "0.5", "0.7".
 
 ### Run exps for $P(c=1 \mid i,j,k)$
