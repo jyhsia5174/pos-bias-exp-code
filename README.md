@@ -1,5 +1,10 @@
 # pos-bias-exp-code
 
+## System requirement
+
+- memory 128G
+- GPU
+
 ## Install dependencies
 
 - mkl (https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library.html)
