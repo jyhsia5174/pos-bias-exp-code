@@ -115,6 +115,9 @@ private:
     void random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
     void propensious_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
     void determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
+    void greedy_random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
+    void random_greedy_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list);
+
     void filter_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong, ImpDouble>>& idx_list);
 
     void init_pair(const ImpInt &f12, const ImpInt &fi, const ImpInt &fj,
