@@ -1391,6 +1391,35 @@ void ImpProblem::determined_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>
     }
 }
 
+void ImpProblem::greedy_random_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
+    idx_list.clear();
+    vector<ImpLong> indices(z.size(), 0);
+    iota(indices.begin(), indices.end(), 0);
+    sort(indices.begin(), indices.end(), Comp(z.data()));
+    
+    ImpInt t = 0;
+    while( t < max_t ){
+        idx_list.push_back( make_pair( indices[t], 1.0 ));
+        t++;
+    }
+    shuffle(idx_list.begin(), idx_list.end(), gen);
+}
+
+void ImpProblem::random_greedy_filter(const Vec& z, vector<pair<ImpLong, ImpDouble>>& idx_list){
+    idx_list.clear();
+    
+    vector<ImpLong> indices(z.size(), 0);
+    iota(indices.begin(), indices.end(), 0);
+    shuffle(indices.begin(), indices.end(), gen);
+    sort(indices.begin(), indices.begin() + max_t, Comp(z.data()));
+
+    ImpInt t = 0;
+    while( t < max_t ){
+        idx_list.push_back( make_pair( indices[t], 1.0 ));
+        t++;
+    }
+}
+
 void ImpProblem::filter_output(const ImpLong i, FILE* f_out, vector<pair<ImpLong, ImpDouble>>& idx_list){
     for(auto p: idx_list){
         ImpLong idx = p.first;
@@ -1452,16 +1481,20 @@ void ImpProblem::filter() {
 
     gen.seed(1);
     FILE * f_rd = fopen("random_filter.label", "w" );
-    FILE * f_pr = fopen("propensious_filter.label", "w" );
+    //FILE * f_pr = fopen("propensious_filter.label", "w" );
     FILE * f_de = fopen("determined_filter.label", "w" );
+    FILE * f_gr = fopen("greedy_random_filter.label", "w" );
+    FILE * f_rg = fopen("random_greedy_filter.label", "w" );
 
     const Vec price_vec = Vec( bt.size(), 1.0 );
   
     ImpLong cnt = 0;
     const ImpLong batch_size = 1000000;
     vector<pair<ImpLong, ImpDouble>> *idx_list_rd = new vector<pair<ImpLong, ImpDouble>>[batch_size];
-    vector<pair<ImpLong, ImpDouble>> *idx_list_pr = new vector<pair<ImpLong, ImpDouble>>[batch_size];
+    //vector<pair<ImpLong, ImpDouble>> *idx_list_pr = new vector<pair<ImpLong, ImpDouble>>[batch_size];
     vector<pair<ImpLong, ImpDouble>> *idx_list_de = new vector<pair<ImpLong, ImpDouble>>[batch_size];
+    vector<pair<ImpLong, ImpDouble>> *idx_list_gr = new vector<pair<ImpLong, ImpDouble>>[batch_size];
+    vector<pair<ImpLong, ImpDouble>> *idx_list_rg = new vector<pair<ImpLong, ImpDouble>>[batch_size];
     
     while(cnt*batch_size < Uva->m){
         ImpLong start = cnt*batch_size;
@@ -1488,27 +1521,35 @@ void ImpProblem::filter() {
             }
 
             random_filter(z, idx_list_rd[idx]);
-            propensious_filter(z, idx_list_pr[idx]);
+            //propensious_filter(z, idx_list_pr[idx]);
             determined_filter(z, idx_list_de[idx]);
+            greedy_random_filter(z, idx_list_gr[idx]);
+            random_greedy_filter(z, idx_list_rg[idx]);
         }
         
         for (ImpLong i = start; i < end; i++) {
             ImpLong idx = i - start;
             filter_output(i, f_rd, idx_list_rd[idx]);
-            filter_output(i, f_pr, idx_list_pr[idx]);
+            //filter_output(i, f_pr, idx_list_pr[idx]);
             filter_output(i, f_de, idx_list_de[idx]);
+            filter_output(i, f_gr, idx_list_gr[idx]);
+            filter_output(i, f_rg, idx_list_rg[idx]);
         }
 
         cnt++;
     }
 
     delete[] idx_list_rd;
-    delete[] idx_list_pr;
+    //delete[] idx_list_pr;
     delete[] idx_list_de;
+    delete[] idx_list_gr;
+    delete[] idx_list_rg;
 
     fclose(f_rd);
-    fclose(f_pr);
+    //fclose(f_pr);
     fclose(f_de);
+    fclose(f_gr);
+    fclose(f_rg);
 }
 
 Vec ImpProblem::init_price_vec(const int price_list_size){
