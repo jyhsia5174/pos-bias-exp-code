@@ -2,13 +2,13 @@ import sys
 import random as rd
 
 POS = 10
+base_rate = 0.5
 
 file=sys.argv[1]
 
 def init_pos_bias( gamma ):
     res_list = []
-    base_rate = 0.9
-    alpha_k = 0.9
+    alpha_k = 1
     for i in range(POS):
         res_list.append( gamma * alpha_k )
         alpha_k *= base_rate
@@ -19,10 +19,11 @@ def change_label_to_zero( tk ):
     return "{}:{}:{}".format(idx, '0', prop)
 
 def output_bias_file( file_name ):
-    ofile_name = "{}.pos.bias".format(file_name)
+    ofile_name = "{}.pos.0.5.unif.bias".format(file_name)
     rf = open(file_name, 'r')
     of = open(ofile_name, 'w')
     pos_bias_list = init_pos_bias( 1.0 )
+    print(pos_bias_list)
     unif_bias = sum(pos_bias_list) / float(len(pos_bias_list))
     print(unif_bias)
     for line in rf:

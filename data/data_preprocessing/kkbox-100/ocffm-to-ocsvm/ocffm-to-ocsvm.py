@@ -63,12 +63,14 @@ def convert_context( context, context_dict):
 
 if __name__ == '__main__':
     item = sys.argv[1]
-    context_list = sys.argv[2:]
-    print("item file: {} context files: [{}]".format(item, ','.join(context_list)))
+    feature_80 = sys.argv[2]
+    feature_10 = sys.argv[3]
+    context_list = sys.argv[3:]
+    print("item file: {}\ncontext files: [{}]".format(item, ','.join(context_list)))
 
-    print('Start build dictionary')
-    item_dict, context_dict = build_dict(item, context_list)
+    print("Start build dictionary item: {} context: {}.".format(item, [feature_80, feature_10]))
+    item_dict, context_dict = build_dict(item, [feature_80, feature_10])
 
     convert_item( item, item_dict)
     for context in context_list:
-        convert_context( context, context_dict)
+        convert_context(context, context_dict)

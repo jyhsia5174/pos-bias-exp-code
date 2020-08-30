@@ -1,11 +1,16 @@
 #! /bin/bash
 
-ext=$1
+ffm_ext=$1
+unif_ffm_ext=$2
 
-svm_ext="${ext/ffm/svm}"
+item="item.ffm"
+truth="truth.ffm" # 10% data
+filter="filter.ffm" # 80% data
 
-python ocffm-to-ocsvm.py item.ffm det.${ext} prop.${ext} random.${ext} truth.ffm
+ffm_files="det.${ffm_ext} random.${ffm_ext} 
+greedy_random.${ffm_ext} random_greedy.${ffm_ext}"
+unif_ffm_files="det.${unif_ffm_ext} random.${unif_ffm_ext} 
+greedy_random.${unif_ffm_ext} random_greedy.${unif_ffm_ext}"
 
-echo "tar --dereference -zcvf kkbox.10.song.feat.${ext}.tar.gz item.ffm det.${ext} prop.${ext} random.${ext} truth.ffm item.svm det.${svm_ext} prop.${svm_ext} random.${svm_ext} truth.svm "
-
-tar --dereference -zcvf kkbox.10.song.feat.${ext}.tar.gz item.ffm det.${ext} prop.${ext} random.${ext} truth.ffm item.svm det.${svm_ext} prop.${svm_ext} random.${svm_ext} truth.svm 
+# First file must be item.ffm 
+python ocffm-to-ocsvm.py ${item} ${filter} ${truth} ${ffm_files} ${unif_ffm_files}
