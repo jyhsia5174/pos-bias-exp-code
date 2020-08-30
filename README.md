@@ -61,18 +61,26 @@ cd data;
 #### Some notes
 
 - **{raw_data_path}** should have similar files following:
-  - det.ffm.pos.0.5.bias  
-  - item.ffm  
-  - random.ffm.pos.0.5.bias  
-  - truth.ffm
-  - det.svm.pos.0.5.bias  
-  - item.svm  
-  - random.svm.pos.0.5.bias  
-  - truth.svm
-  - greedy.random.ffm.pos.0.5.bias 
-  - random.greedy.ffm.pos.0.5.bias 
-  - greedy.random.svm.pos.0.5.bias 
-  - random.greedy.svm.pos.0.5.bias 
+        -det.ffm.pos.0.5.bias
+        -det.ffm.pos.0.5.unif.bias
+        -det.svm.pos.0.5.bias
+        -det.svm.pos.0.5.unif.bias
+        -greedy_random.ffm.pos.0.5.bias
+        -greedy_random.ffm.pos.0.5.unif.bias
+        -greedy_random.svm.pos.0.5.bias
+        -greedy_random.svm.pos.0.5.unif.bias
+        -item.ffm
+        -item.svm
+        -random.ffm.pos.0.5.bias
+        -random.ffm.pos.0.5.unif.bias
+        -random_greedy.ffm.pos.0.5.bias
+        -random_greedy.ffm.pos.0.5.unif.bias
+        -random_greedy.svm.pos.0.5.bias
+        -random_greedy.svm.pos.0.5.unif.bias
+        -random.svm.pos.0.5.bias
+        -random.svm.pos.0.5.unif.bias
+        -truth.ffm
+        -truth.svm
 - **{pos_bias}** is like "0.5", "0.7".
 
 ### Run exps for $P(c=1 \mid i,j,k)$
