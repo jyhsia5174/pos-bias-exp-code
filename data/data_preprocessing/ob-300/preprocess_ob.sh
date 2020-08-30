@@ -29,7 +29,12 @@ make
 cd ../../add_bias
 ./add_bias_all.sh
 
+# Add position bias
+cd ../add_unif_bias
+./add_bias_all.sh
+
 # convert data to svm format
 cd ../ocffm-to-ocsvm
-./convert.sh ffm.pos.0.5.bias
+./convert.sh ffm.pos.0.5.bias ffm.pos.0.5.unif.bias
+
 cd ..

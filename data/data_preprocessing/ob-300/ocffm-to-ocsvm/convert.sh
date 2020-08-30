@@ -1,16 +1,16 @@
 #! /bin/bash
 
 ffm_ext=$1
-svm_ext="${ffm_ext/ffm/svm}"
+unif_ffm_ext=$2
 
-ffm_files="item.ffm det.${ffm_ext} random.${ffm_ext} 
-greedy_random.${ffm_ext} random_greedy.${ffm_ext} truth.ffm"
-svm_files="item.svm det.${svm_ext} random.${svm_ext} 
-greedy_random.${svm_ext} random_greedy.${svm_ext} truth.svm"
+item="item.ffm"
+truth="truth.ffm" # 10% data
+filter="filter.ffm" # 80% data
+
+ffm_files="det.${ffm_ext} random.${ffm_ext} 
+greedy_random.${ffm_ext} random_greedy.${ffm_ext}"
+unif_ffm_files="det.${unif_ffm_ext} random.${unif_ffm_ext} 
+greedy_random.${unif_ffm_ext} random_greedy.${unif_ffm_ext}"
 
 # First file must be item.ffm 
-python ocffm-to-ocsvm.py ${ffm_files}
-
-#echo "tar --dereference -zcvf ob.300.${ext}.tar.gz item.ffm det.${ext} prop.${ext} random.${ext} truth.ffm item.svm det.${svm_ext} prop.${svm_ext} random.${svm_ext} truth.svm "
-#
-#tar --dereference -zcvf ob.300.${ext}.tar.gz item.ffm det.${ext} prop.${ext} random.${ext} truth.ffm item.svm det.${svm_ext} prop.${svm_ext} random.${svm_ext} truth.svm 
+python ocffm-to-ocsvm.py ${item} ${filter} ${truth} ${ffm_files} ${unif_ffm_files}
