@@ -7,8 +7,8 @@ filter_data='filter.ffm'
 truth_data='truth.ffm'
 
 total_num=`wc -l ${data} | awk '{print $1}'`
-small_perc_total_num=`echo "scale=0;$total_num*5/100" | bc -l `
-large_perc_total_num=`echo "scale=0;$total_num*85/100" | bc -l `
+small_perc_total_num=`echo "scale=0;$total_num*10/100" | bc -l `
+large_perc_total_num=`echo "scale=0;$total_num*80/100" | bc -l `
 echo $total_num $small_perc_total_num $large_perc_total_num
 
 
