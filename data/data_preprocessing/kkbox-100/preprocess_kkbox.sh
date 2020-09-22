@@ -10,6 +10,7 @@ cd ../split-data
 
 # train on G1
 cd ../grid-and-filter/hyffm-grid
+. ./init.sh
 make
 # grid model and select best parameter 
 # We already save the best parameter into save_model.sh files.
