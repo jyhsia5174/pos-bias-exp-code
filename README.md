@@ -34,30 +34,34 @@ Before running the all-in-one script, it's recommended to run the toy example fi
 ./toy-example.sh
 ```
 In the end, it should be output something as below:
-> method,ll-pos,auc-pos,ll-alpha,auc-alpha
-> FFM-Ideal,0.662159,0.473809,0.662134,0.363423
-> FFM-Greedy-A,0.683852,0.389617,0.683836,0.674310
-> FFM-Greedy-P,0.683749,0.390451,0.683732,0.729846
-> FFM-Random,0.663728,0.386832,0.663704,0.216443
-> FFM-Greedy,0.683511,0.338186,0.683490,0.642328
-> FFM-EE(0.01),0.679597,0.387599,0.679578,0.750850
-> FFM-EE(0.1),0.673465,0.408462,0.673445,0.688388
-> FFM-CF(0.01),0.692,0.628,0.692,0.698
-> FFM-CF(0.01),0.18,0.432,0.179,0.197
-> ====================
-> TFM-Greedy,0.564,0.679,--,--
-> TFM-EE(0.01),0.558,0.616,--,--
-> TFM-EE(0.1),0.509,0.536,--,--
-> TFM-Random,0.164,0.501,--,--
-> TFM-CF(0.01),0.692,0.541,--,--
-> TFM-CF(0.1),0.207,0.506,--,--
-> TFM-RG,0.193,0.316,--,--
-> TFM-GR,0.56,0.41,--,--
-And in directory "toy_exps_res", there are files like:
+```
+method,ll-pos,auc-pos,ll-alpha,auc-alpha
+FFM-Ideal,0.662159,0.473809,0.662134,0.363423
+FFM-Greedy-A,0.683852,0.389617,0.683836,0.674310
+FFM-Greedy-P,0.683749,0.390451,0.683732,0.729846
+FFM-Random,0.663728,0.386832,0.663704,0.216443
+FFM-Greedy,0.683511,0.338186,0.683490,0.642328
+FFM-EE(0.01),0.679597,0.387599,0.679578,0.750850
+FFM-EE(0.1),0.673465,0.408462,0.673445,0.688388
+FFM-CF(0.01),0.692,0.628,0.692,0.698
+FFM-CF(0.01),0.18,0.432,0.179,0.197
+====================
+TFM-Greedy,0.564,0.679,--,--
+TFM-EE(0.01),0.558,0.616,--,--
+TFM-EE(0.1),0.509,0.536,--,--
+TFM-Random,0.164,0.501,--,--
+TFM-CF(0.01),0.692,0.541,--,--
+TFM-CF(0.1),0.207,0.506,--,--
+TFM-RG,0.193,0.316,--,--
+TFM-GR,0.56,0.41,--,--
+```
+
+And in directory "toy_exps_res/", there are files like:
 - toy-example_mbias.pdf
 - toy-example_pbias.pdf
 - toy-example_rbias.pdf
 - toy-example.res
+
 Otherwise, there is something wrong with your env and denpendencies, please check the screen output.
 
 ### All-in-one 
@@ -66,4 +70,4 @@ After dependencies installation, setting up the env and data preparation, please
 ```shell
 ./exp.sh
 ```
-All results are in directory "exps_res".
+All results are in directory "exps_res/".
