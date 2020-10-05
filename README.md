@@ -7,7 +7,7 @@
 
 ## Install dependencies
 
-- mkl (https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library.html)
+- [mkl](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library.html), modify 'init.sh' according to your installation path.
 - cuda 9.0 or higher
 - anaconda python 3.7 version
 
