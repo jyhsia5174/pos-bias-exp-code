@@ -3,6 +3,7 @@
 import pandas as pd, numpy as np
 import sys
 ds =sys.argv[1]
+save_dir = sys.argv[2]
 root = "./data/%s/stats"%ds
 
 det_rd_trva = pd.read_csv('%s/RD.csv'%(root))
@@ -205,7 +206,7 @@ ax1.view_init(azim=-98, elev=11)
 ax1.w_xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
 ax1.w_yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
 ax1.w_zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-plt.savefig("%s/%s_pbias.pdf"%(root, ds), format="pdf", dpi=1000, bbox_inches='tight', pad_inches=-1.1)
+plt.savefig("%s/%s_pbias.pdf"%(save_dir, ds), format="pdf", dpi=1000, bbox_inches='tight', pad_inches=-1.1)
 
 del fig, ax1
 import matplotlib.pyplot as plt
@@ -259,7 +260,7 @@ ax1.view_init(azim=-98, elev=11)
 ax1.w_xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
 ax1.w_yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
 ax1.w_zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-plt.savefig("%s/%s_rbias.pdf"%(root, ds), format="pdf", dpi=1000, bbox_inches='tight', pad_inches=-1.1)
+plt.savefig("%s/%s_rbias.pdf"%(save_dir, ds), format="pdf", dpi=1000, bbox_inches='tight', pad_inches=-1.1)
 
 del fig, ax1
 import matplotlib.pyplot as plt
@@ -298,4 +299,4 @@ ax1.view_init(azim=-98, elev=11)
 ax1.w_xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
 ax1.w_yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
 ax1.w_zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-plt.savefig("%s/%s_mbias.pdf"%(root, ds), format="pdf", dpi=1000, bbox_inches='tight', pad_inches=-1.1)
+plt.savefig("%s/%s_mbias.pdf"%(save_dir, ds), format="pdf", dpi=1000, bbox_inches='tight', pad_inches=-1.1)

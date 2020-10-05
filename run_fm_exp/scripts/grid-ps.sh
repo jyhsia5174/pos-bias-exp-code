@@ -23,7 +23,7 @@ task(){
 train_cmd="${train} -t ${t} -c ${c} "
 
 # Print out all parameter pair
-for l in 16e-6 4e-6 1e-6 25e-8 625e-10 #64 #128
+for l in 16e-6 4e-6 1e-6 25e-8 625e-10
 do
     for w in 0 
     do

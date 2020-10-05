@@ -2,11 +2,12 @@
 
 . ./init.sh
 root=`pwd`
+mkdir -p exps_res
 
-for i in "kkbox-100" #"ob-300"
+for i in "kkbox-100" "ob-300"
 do
-	#cd ${root}/data/data_preprocessing/$i
-	#./preprocess.sh
+	cd ${root}/data/data_preprocessing/$i
+	./preprocess.sh
 
 	cd ${root}/data
 	rm -r ${i}
@@ -23,6 +24,6 @@ do
 	wait
 
 	cd ${root}
-	python gather_record.py ${i} auc | tee ${i}.res
-	python ratio_analysis.py ${i}
+	python gather_record.py ${i} auc | tee exps_res/${i}.res
+	python ratio_analysis.py ${i} exps_res
 done

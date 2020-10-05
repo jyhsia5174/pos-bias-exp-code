@@ -22,112 +22,48 @@ git submodule init; git submodule update;
 
 ## Experiments
 
-### Create data (should be do first!)
+### Prepare raw data (should be do first!)
 
-#### 1. Proprocess data
+- KKbox: Put KKBOX's members.csv, songs.csv and train.csv to "data/data_preprocessing/kkbox-100/kkbox_csv_to_ocffm/".
+- Outbrain: Put Outbrain's clicks_train.csv, cv_events.csv, promote_content.csv and document_meta.csv to "data/data_preprocessing/ob.300/ob_csv_to_ocffm".
 
-##### KKBOX
+### Toy example
 
-Put KKBOX's members.csv, songs.csv and train.csv to "data/data_preprocessing/kkbox-100/kkbox_csv_to_ocffm/".
-```
-cd data/data_preprocessing/kkbox-100/
-./preprocess_kkbox.sh
-```
-
-##### Outbrain
-
-Put Outbrain's clicks_train.csv, cv_events.csv, promote_content.csv and document_meta.csv to "data/data_preprocessing/ob.300/ob_csv_to_ocffm".
-```
-cd data/data_preprocessing/ob.300
-./preprocess_ob.sh
-```
-
-#### 2. Final data preperation
-
-#####  Create data with self validation set
-
+Before running the all-in-one script, it's recommended to run the toy example first to check if the env and denpendencies are set up properly.
 ```shell
-cd data;
-./gen_data_selfva.sh {raw_data_path} {pos_bias}
+./toy-example.sh
 ```
+In the end, it should be output something as below:
+> method,ll-pos,auc-pos,ll-alpha,auc-alpha
+> FFM-Ideal,0.662159,0.473809,0.662134,0.363423
+> FFM-Greedy-A,0.683852,0.389617,0.683836,0.674310
+> FFM-Greedy-P,0.683749,0.390451,0.683732,0.729846
+> FFM-Random,0.663728,0.386832,0.663704,0.216443
+> FFM-Greedy,0.683511,0.338186,0.683490,0.642328
+> FFM-EE(0.01),0.679597,0.387599,0.679578,0.750850
+> FFM-EE(0.1),0.673465,0.408462,0.673445,0.688388
+> FFM-CF(0.01),0.692,0.628,0.692,0.698
+> FFM-CF(0.01),0.18,0.432,0.179,0.197
+> ====================
+> TFM-Greedy,0.564,0.679,--,--
+> TFM-EE(0.01),0.558,0.616,--,--
+> TFM-EE(0.1),0.509,0.536,--,--
+> TFM-Random,0.164,0.501,--,--
+> TFM-CF(0.01),0.692,0.541,--,--
+> TFM-CF(0.1),0.207,0.506,--,--
+> TFM-RG,0.193,0.316,--,--
+> TFM-GR,0.56,0.41,--,--
+And in directory "toy_exps_res", there are files like:
+- toy-example_mbias.pdf
+- toy-example_pbias.pdf
+- toy-example_rbias.pdf
+- toy-example.res
+Otherwise, there is something wrong with your env and denpendencies, please check the screen output.
 
-#####  Create data with rand validation set
+### All-in-one 
 
+After dependencies installation, setting up the env and data preparation, please run
 ```shell
-cd data;
-./gen_data_rndva.sh {raw_data_path} {pos_bias}
+./exp.sh
 ```
-
-#### Some notes
-
-- **{raw_data_path}** should have similar files following:
-  - det.ffm.pos.0.5.bias
-  - det.ffm.pos.0.5.unif.bias
-  - det.svm.pos.0.5.bias
-  - det.svm.pos.0.5.unif.bias
-  - greedy_random.ffm.pos.0.5.bias
-  - greedy_random.ffm.pos.0.5.unif.bias
-  - greedy_random.svm.pos.0.5.bias
-  - greedy_random.svm.pos.0.5.unif.bias
-  - item.ffm
-  - item.svm
-  - random.ffm.pos.0.5.bias
-  - random.ffm.pos.0.5.unif.bias
-  - random_greedy.ffm.pos.0.5.bias
-  - random_greedy.ffm.pos.0.5.unif.bias
-  - random_greedy.svm.pos.0.5.bias
-  - random_greedy.svm.pos.0.5.unif.bias
-  - random.svm.pos.0.5.bias
-  - random.svm.pos.0.5.unif.bias
-  - truth.ffm
-  - truth.svm
-- **{pos_bias}** is like "0.5", "0.7".
-
-### Run exps for $P(c=1 \mid i,j,k)$
-
-#### For exps
-
-```shell
-cd run_dl_exp;
-./exp_ffm.sh {data_path} {pos_bias} {gpu_idx} {mode}
-```
-
-- **{pos_bias}** is like "0.5", "0.7".
-- **{gpu_idx}** should be one of GPU idxes of your current workstation, like "0" or "1";
-- **{mode}** should be one of "logloss" and "auc".
-
-#### Take results
-
-```shell
-cd run_dl_exp;
-python get_record.py {exp_dir_for_specific_data}/{data_part} {mode}
-```
-
-### Run exps for hyffm
-
-#### For exps
-
-```shell
-cd run_fm_exp;
-./exp.sh {data_path} {mode} {pos_bias}
-```
-
-- **{pos_bias}** is like "0.5", "0.7".
-- **{mode}** should be one of "logloss" and "auc".
-
-#### Take results
-
-- results of 'der.0.01,der.0.1,der.comb.0.01,der.comb.0.1,derive.det,derive.random'
-
-    ```shell
-    cd run_fm_exp;
-    python get_record.py {exp_dir_for_specific_data}/{data_part} {mode}
-    ```
-
-- results of 'der.comb.0.01.imp,der.comb.0.1.imp'
-
-    ```shell
-    cd run_fm_exp;
-    ./record-imp.sh {exp_dir_for_specific_data}/{data_part} {mode}
-    ```
-
+All results are in directory "exps_res".
