@@ -24,8 +24,8 @@ git submodule init; git submodule update;
 
 ### Prepare raw data (should be do first!)
 
-- KKbox: Put KKBOX's members.csv, songs.csv and train.csv to "data/data_preprocessing/kkbox-100/kkbox_csv_to_ocffm/".
-- Outbrain: Put Outbrain's clicks_train.csv, cv_events.csv, promote_content.csv and document_meta.csv to "data/data_preprocessing/ob.300/ob_csv_to_ocffm".
+- **KKbox**: Put KKBOX's members.csv, songs.csv and train.csv to "data/data_preprocessing/kkbox-100/kkbox_csv_to_ocffm/".
+- **Outbrain**: Put Outbrain's clicks_train.csv, cv_events.csv, promote_content.csv and document_meta.csv to "data/data_preprocessing/ob.300/ob_csv_to_ocffm".
 
 ### Toy example
 
