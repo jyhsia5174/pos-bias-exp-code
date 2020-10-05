@@ -34,7 +34,7 @@ exp_dir=`basename ${data_path}`
 
 for mn in 'ffm'
 do
-	for i in 'random' 'det'
+	for i in 'det'
 	do
 		cdir=${exp_dir}/derive.${i}.${mn}.${ps}
 		mkdir -p ${cdir}
@@ -46,26 +46,6 @@ do
 		for j in 'trva' 'tr' 'va'
 		do
 			ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
-		done
-		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
-	done
-done
-
-mn='ffm'
-for i in '.comb.' 
-do 
-	for k in 0.01 0.1
-	do 
-		cdir=${exp_dir}/der${i}${k}.${mn}.${ps}
-		mkdir -p ${cdir}
-		ln -sf ${root}/scripts/*.sh ${cdir}
-		ln -sf ${root}/scripts/*.py ${cdir}
-		ln -sf ${root}/${data_path}/der${i}${k}/*gt*svm ${cdir}
-		ln -sf ${root}/${data_path}/der${i}${k}/item.svm ${cdir}
-		ln -sf ${root}/${data_path}/der${i}${k}/truth.svm ${cdir}
-		for j in 'trva' 'tr' 'va'
-		do
-			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.svm ${cdir}/${j}.svm
 		done
 		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done

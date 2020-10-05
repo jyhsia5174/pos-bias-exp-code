@@ -19,7 +19,7 @@ do
 	do
 		va="${va_prefix}${i}${j}"
 		va=`echo ${va} | rev | cut -c 2- | rev`
-		cmd="python ../../main.py"
+		cmd="python ../../../main.py"
 		cmd="${cmd} --dataset_name pos"
 		cmd="${cmd} --train_part trva"
 		cmd="${cmd} --valid_part ${va}" 

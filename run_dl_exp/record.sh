@@ -1,9 +1,13 @@
 root=$1
 mode=$2
 
-for i in 'der.0.01' 'der.0.1' 'der.comb.0.01' 'der.comb.0.1' 'derive.det' 'derive.random'
+for i in 'cbias' 'normal'
 do
-	python get_record.py ${root}/${i} ${mode} > ${i}.record
+	for j in 'der.comb.0.01.ffm.wops' 'der.comb.0.1.ffm.wops' 'derive.det.biffm.wops' 'derive.det.extffm.wops' 'derive.det.ffm.wops' 'derive.random.ffm.wops' 
+	do
+		cdir=${root}/${i}/${j}
+		python get_record.py ${cdir} ${mode} > ${i}.record
+	done
 done
 
 paste *.record | column -s $' ' -t

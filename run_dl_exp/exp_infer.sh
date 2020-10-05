@@ -4,6 +4,7 @@ data_path=$1
 pos_bias=$2
 gpu=$3
 mode=$4
+ds=$5
 ps='wops'
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] ; then
@@ -19,18 +20,37 @@ run_exp(){
 	mode=$3
 	model_name=$4
 	cmd="cd ${cdir}"
-	cmd="${cmd}; ./grid.sh ${gpu} ${mode} ${model_name} ${ps}" 
-	cmd="${cmd}; ./do-test.sh ${gpu} ${mode} ${model_name} ${ps}"
-	cmd="${cmd}; ./do-pred.sh ${gpu} ${mode} ${ps}"
-	cmd="${cmd}; echo 'va_logloss va_auc' > ${mode}.record"
-	cmd="${cmd}; python select_params.py logs ${mode} | rev | cut -d' ' -f1-2 | rev >> ${mode}.record" # va logloss, auc
-	cmd="${cmd}; head -n10 test-score.${mode}/rnd*log >> ${mode}.record" # va logloss, auc
+	cmd="${cmd}; ./do-infer.sh ${gpu} ${mode} ${model_name} ${ps} ${best_params}"
+	cmd="${cmd}; ./do-infer-pred.sh ${gpu} ${mode} ${ps}"
+	cmd="${cmd}; echo 'logloss auc' > ${mode}.record"
+	cmd="${cmd}; head -n10 test-score.${mode}/rnd*log >> ${mode}.record" # 
 	cmd="${cmd}; cd ${rdir}"
 	echo ${cmd}
 }
 
 set -e
 exp_dir=`basename ${data_path}`
+exp_dir="${ds}/${exp_dir}"
+
+for mn in 'biffm' 'extffm'
+do
+	for i in 'det'
+	do
+		cdir=${exp_dir}/derive.${i}.${mn}.${ps}
+		mkdir -p ${cdir}
+		ln -sf ${root}/scripts/*.sh ${cdir}
+		ln -sf ${root}/scripts/*.py ${cdir}
+		ln -sf ${root}/${data_path}/derive/*gt*svm ${cdir}
+		ln -sf ${root}/${data_path}/derive/item.svm ${cdir}
+		ln -sf ${root}/${data_path}/derive/truth.svm ${cdir}
+		for j in 'trva' 'tr' 'va'
+		do
+			ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
+		done
+		best_params=`grep -nHR "${cdir}" ./best_params | cut -d":" -f4`
+		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
+	done
+done
 
 for mn in 'ffm'
 do
@@ -47,6 +67,7 @@ do
 		do
 			ln -sf ${root}/${data_path}/derive/${i}_${j}.svm ${cdir}/${j}.svm
 		done
+		best_params=`grep -nHR "${cdir}" ./best_params | cut -d":" -f4`
 		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done
@@ -60,13 +81,14 @@ do
 		mkdir -p ${cdir}
 		ln -sf ${root}/scripts/*.sh ${cdir}
 		ln -sf ${root}/scripts/*.py ${cdir}
-		ln -sf ${root}/${data_path}/der${i}${k}/*gt*svm ${cdir}
+		ln -sf ${root}/${data_path}/derive/*gt*svm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}/item.svm ${cdir}
 		ln -sf ${root}/${data_path}/der${i}${k}/truth.svm ${cdir}
 		for j in 'trva' 'tr' 'va'
 		do
 			ln -sf ${root}/${data_path}/der${i}${k}/select_${j}.svm ${cdir}/${j}.svm
 		done
+		best_params=`grep -nHR "${cdir}" ./best_params | cut -d":" -f4`
 		run_exp ${cdir} ${root} ${mode} ${mn} | xargs -0 -d '\n' -P 1 -I {} sh -c {} 
 	done
 done

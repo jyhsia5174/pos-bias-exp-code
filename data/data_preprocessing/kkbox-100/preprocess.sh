@@ -1,9 +1,7 @@
 #! /bin/bash
 
-echo "Please make sure you already source mkl libraries."
-
 # convert csv to ocffm
-cd ob_csv_to_ocffm
+cd kkbox_csv_to_ocffm
 ./run_filter.sh
 
 # split to G1 G2 G3
@@ -12,8 +10,7 @@ cd ../split-data
 
 # train on G1
 cd ../grid-and-filter/hyffm-grid
-. ./init.sh
-make
+make clean all
 # grid model and select best parameter 
 # We already save the best parameter into save_model.sh files.
 # Thus, we skip the grid process.
@@ -22,7 +19,7 @@ make
 
 # filter G2 by model which learned from G1
 cd ../filter
-make
+make clean all
 ./run-filter.sh
 
 # Add position bias
